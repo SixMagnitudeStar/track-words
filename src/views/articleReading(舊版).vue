@@ -16,11 +16,11 @@
           <img @click="saveArticle()" class="icon" src="../assets/check.png" alt="儲存文章" title="儲存文章">
           <div class="tooltip-text">儲存文章</div>
         </div>
-        <!-- <div class="tooltip" :class="{ 'editing-icon': isEditing }">
+        <div class="tooltip" :class="{ 'editing-icon': isEditing }">
           <img  @click="editArticle()"  class="icon" src="../assets/edit.png" alt="編輯文章" title="編輯文章" >
           <div class="tooltip-text"
           >編輯文章</div>
-        </div> -->
+        </div>
         <div class="tooltip">
           <img @click="deleteArticle()" class="icon" src="../assets/bin.png" alt="刪除文章" title="刪除文章">
           <div class="tooltip-text">刪除文章</div>
@@ -44,22 +44,36 @@
           ref="editableTitle"
           spellcheck="false"
       ></h1>
-      <div v-if="isEditing" 
+      <div v-if="newArticleID_arr.includes(selectedArticle.index)" 
         class="article-editor" 
         contenteditable="true"
         @input="updateContent"
          ref="editorRef"
         ></div>
         
-      <div id="spandiv" v-else>
+      <div id="spandiv" v-else
+
+        @input="onDivInput"
+        
+        @keydown="onDivKeydown">
+        <!-- <span v-for="(block, index) in selectedArticle.blocks" 
+              :key="index"
+              :data-index="index">
+          {{ block.text }}
+        </span> -->
       <span
-        v-for="(block, index) in selectedArticle.blocks"
+        v-for="(block, index) in sortedBlocks"
         :key="index"
+        :data-index="index"
+        :data-previousIndex="block.previous_index"
+        :data-nextIndex="block.next_index"
         :class="{ 
-          word: block.text_type==='word', 
+          block: true, 
           active: block.marked
         }"
-        @click="markWord(block,index)"
+        :contenteditable="isEditing"
+        @click="toggleWord(index)"
+        @input="changeblock(block, index, $event)"
         v-html="block.text"
       ></span>
       </div>
@@ -104,7 +118,6 @@ defineOptions({
 })
 
 
-
 const auth = useAuthStore()
 
 const headers = {
@@ -122,6 +135,113 @@ const selectedArticle = ref({
 
 
 
+
+
+function refreshSpan(){
+
+  //
+  alert('刷新span');
+  const container = document.querySelector('#spandiv');
+
+  // 假設你的資料陣列
+
+
+  // 清空容器
+  container.innerHTML = '';
+
+  // 依資料生成 span 
+  // 這個用不到了
+  sortedBlocks.value.forEach((block, index) => {
+    const span = document.createElement('span');
+    span.innerText = block.text;                // 設定文字
+    span.dataset.index = index;                 // 儲存 index
+    span.classList.add('block');               // 加 class
+    if (block.marked) span.classList.add('active'); // 條件 class
+    span.contentEditable = 'true';             // 可編輯
+
+    // 可以加事件
+    span.addEventListener('click', () => {
+      console.log('點擊 span:', index);
+    });
+
+    container.appendChild(span);
+  });
+}
+
+
+function onDivKeydown(e) {
+  // alert('key!')
+  // if (e.code === 'Space') {
+  //   alert('進入')
+  //   e.preventDefault(); // 阻止空白鍵輸入到 span
+  //   const sel = window.getSelection();
+  //   if (!sel.rangeCount) return;
+
+  //   const range = sel.getRangeAt(0);
+  //   let node = range.startContainer;
+  //   const span = node.nodeType === 3 ? node.parentElement : node;
+  //   const parentSpan = span.closest('span');
+  //   if (!parentSpan) return;
+
+  //   const index = parseInt(parentSpan.dataset.index);
+
+  //   // 在陣列 index + 1 插入新元素
+  //   alert('插入');
+  //   selectedArticle.value.blocks.splice(index + 1, 0, { text: ' ', type: 'word', marked: false });
+  //   alert('index: '+index+' new index: '+index+1);
+  //   // 下一個 tick 等 DOM 更新後，把光標放到新 span
+  //   nextTick(() => {
+  //     const newSpan = document.querySelector(`span[data-index="${index + 1}"]`);
+  //     if (!newSpan) return;
+
+  //     const range = document.createRange();
+  //     range.setStart(newSpan, 0);
+  //     range.collapse(true);
+
+  //     const sel = window.getSelection();
+  //     sel.removeAllRanges();
+  //     sel.addRange(range);
+  //     alert('focus');
+  //     newSpan.focus();
+  //   });
+  // }
+}
+
+
+function onDivInput(e) {
+  // const sel = window.getSelection();
+  // if (!sel.rangeCount) return;
+
+  // const range = sel.getRangeAt(0);
+  // const node = range.startContainer; // 光標所在節點
+
+  // // 往上找最近的 span
+  // const span = node.nodeType === 3 ? node.parentElement : node; 
+  // const parentSpan = span.closest('span');
+
+  // if (parentSpan) {
+  //   const index = parentSpan.dataset.index;
+  //   alert('光標在 span index:', index);
+  // } else {
+  //   alert('光標不在任何 span 中');
+  // }
+}
+
+function showblock(){
+
+  alert(JSON.stringify(selectedArticle.value.blocks))
+  // const container = document.querySelector('.article-content');
+  // const spans = container.querySelectorAll('span');
+
+  // // 連接所有文字
+  // const combinedText = Array.from(spans)
+  //   .map(span => span.innerText)   // 或 span.textContent
+  //   .join(' ');                    // 空格分隔，也可以用 '' 連接
+
+  // alert(combinedText);
+
+}
+
 // const articleText = ref("")
 
 
@@ -138,6 +258,7 @@ const markedwords = reactive(['apple','banana','x','sawe','asss','banana','x','s
 
 
 const noteArea = ref(null);
+
 
 
 
@@ -198,6 +319,7 @@ function updateContent(e) {
 // g 標誌
 // 全局匹配（global），會返回 所有匹配到的結果，而不只第一個
 const parsedWords = computed(() => {
+
   const words = (selectedArticle.value.content || '').match(/\s+|\w+|[^\w\s]/g) || []
   return words.map((word) => {
     if ((word.trim() != '') || (!isWord(word))){
@@ -280,6 +402,7 @@ onMounted(async ()=>{
 
 
 function editArticle(){
+  alert('editing');
   isEditing.value = true;
   
 }
@@ -352,6 +475,307 @@ function updateSelectedArticle(fetchedArticle) {
 }
 
 
+// span綁上事件
+function changeblock(block, index, event){
+  // 取得 span 元素
+  // const spanEl = event.target;
+  const targetBlock = selectedArticle.value.blocks.find(b => b.index === index);
+  targetBlock.edited = true;
+
+    // 將 data-edited 同步到 span 元素
+  const spanEl = event.target;
+  spanEl.dataset.edited = 'true'; // 或 targetBlock.edited.toString()
+
+  // alert('異動block: '+targetBlock.text);
+  // alert('整筆: '+JSON.stringify(selectedArticle.value.blocks));
+  // targetBlock.text = spanEl.innerText;
+  // alert('新值: '+targetBlock.text);
+  // data-index
+  // const dataIndex = spanEl.dataset.index;
+
+  // alert(`data-index: ${dataIndex}, v-for index: ${index}, block: ${JSON.stringify(block)}`);
+
+  // alert(JSON.stringify(block));
+  // const targetBlock = selectedArticle.value.blocks.find(b => b.index === index);
+  //  if (!targetBlock) return;  // 沒找到就退出
+
+  // if (targetBlock) {
+  //   targetBlock.edited = true
+  //   // block.text = 'New Text';
+  //   // block.marked = false;
+  // }
+
+  // alert(JSON.stringify(block));
+}
+
+
+function reLinkBlocks() {
+  // 1️⃣ 找出所有 data-edited="true" 的 span
+  const editedSpans = document.querySelectorAll('span[data-edited="true"]');
+
+  editedSpans.forEach(span => {
+    // 取得編輯過的 span 基本資料
+    const text = span.textContent || '';
+    const index = Number(span.dataset.index); // 記得轉數字
+    const preIndex = span.dataset.previousIndex;
+    const nextIndex = span.dataset.nextIndex;
+
+    // 2️⃣ 拆解成單字／空白／標點的陣列
+    const wordsList = text.match(/\s+|\w+|/g) || [];
+
+    // 3️⃣ 轉成新的 block 結構
+    const newBlocks = wordsList.map((word, idx) => {
+      const blocksLength = selectedArticle.value.blocks.length; // append 前長度
+      let textType = '';
+
+      if (word.trim() === '') textType = 'blank';
+      else if (isWord(word)) textType = 'word';
+      else textType = 'punctuation';
+
+      return {
+        edited: true,
+        // 第一個留原 index，其餘接在目前長度之後
+        index: idx === 0 ? index : blocksLength + idx,
+        text: word,
+        text_type: textType,
+        previous_index: null,
+        next_index: null
+      };
+    });
+
+    // 4️⃣ 建立鏈接（previous / next）
+    for (let i = 0; i < newBlocks.length; i++) {
+      if (i === 0) newBlocks[i].previous_index = preIndex;
+      else newBlocks[i].previous_index = newBlocks[i - 1].index;
+
+      if (i === newBlocks.length - 1) newBlocks[i].next_index = nextIndex;
+      else newBlocks[i].next_index = newBlocks[i + 1].index;
+    }
+
+    // 5️⃣ 替換第一個、附加其餘
+    for (let i = 0; i < newBlocks.length; i++) {
+      if (i === 0) {
+        // 用第一個覆蓋原本位置
+        selectedArticle.value.blocks[index] = newBlocks[i];
+      } else {
+        // 其餘 append 到最後
+        selectedArticle.value.blocks.push(newBlocks[i]);
+      }
+    }
+
+    // 6️⃣ 建立異動清單 (changeList)
+    const changeList = [];
+
+    // 找出要刪除的空 block
+    selectedArticle.value.blocks.forEach(block => {
+      if (block.text === '') {
+        changeList.push({
+          method: 'delete',
+          index: block.index
+        });
+      }
+    });
+
+    // 新增與修改
+    newBlocks.forEach((block, idx) => {
+      if (idx === 0) {
+        changeList.push({
+          method: 'change',
+          index: block.index,
+          previous_index: block.previous_index,
+          next_index: block.next_index,
+          text: block.text
+        });
+      } else {
+        changeList.push({
+          method: 'add',
+          index: block.index,
+          previous_index: block.previous_index,
+          next_index: block.next_index,
+          text: block.text
+        });
+      }
+    });
+
+    console.log('changeList:', changeList);
+  });
+
+  // 7️⃣ 最後可選：保持陣列順序
+ // selectedArticle.value.blocks.sort((a, b) => a.index - b.index);
+}
+
+// 重新連結所有單字blocks
+// function reLinkBlcoks(){
+//     //1 遍歷找出edit的span (如果內容為空視為刪除,最後一筆資料index改為該index，該筆資料刪掉)
+//     // 找到所有 data-edited="true" 的 span
+//     const editedSpans = document.querySelectorAll('span[data-edited="true"]');
+
+
+//     //2 正則表達式將span內容拆解成陣列，開頭元素寫入原位置，剩餘的放末尾
+//     editedSpans.forEach(span => {
+
+//         // 取得編輯過的span
+//         const text = span.textContent;
+
+//         // 取得編輯過的span index
+//         const index = span.dataset.index; // dataset屬性是字串
+
+//         // 取得編輯過的previous index
+//         const preIndex = span.dataset.previousIndex;
+
+//         // 取得編輯過的next index
+//         const nextIndex = span.dataset.nextIndex;
+
+
+//         // 用正則表達式將span內容解析成新的單詞陣列
+//         let wordsList =  (text || '').match(/\s+|\w+|/g) || [];
+
+
+
+//         // 將單詞陣列中的值轉換成block的結構，並設定index、previous index、next index 加入整個word blocks的linked list中
+//         let newBlocks = wordsList.map((word, idx) => {
+
+//                 // 取得現在blocks陣列長度
+//                 const blocksLength = selectedArticle.value.blocks.length;
+                
+//                 let textType = '';
+
+//                 // 設定單字類型
+//                 // 1.空白字元
+//                 if (word.trim() === '') {
+//                   textType = 'blank';
+//                 }
+//                 // 2.單字
+//                 else if (isWord(word)) {
+//                   textType = 'word';
+//                 }
+//                 // 3.標點符號或其他
+//                 else{
+//                   textType = 'punctuation';
+//                 }
+
+
+//                 // 當前block的index (新陣列的第一個單字放入原位置，其餘的放入末尾)
+
+//                 let newBlock = {
+//                     edited: 'true',
+//                     index: idx === 0 ? index : blocksLength-1 + idx,
+//                     text: word,
+//                     text_type: textType,
+//                     previous_index: null,
+//                     next_index: null
+//                 }
+//                 return newBlock;
+//         })
+
+//         alert('newblocks: '+JSON.stringify(newBlocks));
+
+//         // 設定新block的previous index、next index
+//         for (let i=0; i<newBlocks.length; i++){
+//           //
+//           if (i=== 0){
+//             newBlocks[i].previous_index = preIndex;
+//           }else{
+//             newBlocks[i].previous_index = newBlocks[i-1].index
+//           }
+
+//           if (i=== newBlocks.length-1){
+//             alert('下一個值'+selectedArticle.value.blocks[nextIndex].text);
+//             newBlocks[i].next_index = nextIndex;
+//           }else{
+//             newBlocks[i].next_index = newBlocks[i+1].index;
+//           }      
+//         }   
+
+//         for (let i=0; i<newBlocks.length; i++){
+//           if (i===0){
+//             //
+//             let str = selectedArticle.value.blocks.map(item => item.text).join("");
+//             alert('str: '+str);
+//             selectedArticle.value.blocks[index] = newBlocks[i];
+//             let str2 = selectedArticle.value.blocks.map(item => item.text).join("");
+//             alert('str2: '+str2);
+            
+//           }else{
+
+//             selectedArticle.value.blocks.push(newBlocks[i]);
+//           }
+//         }
+
+//         //3 建立一個api異動block表  做2的同時，將每個元素依據修改或修增，插入一筆資料到該list裡，最後提交異動
+//         let changeList = [];
+
+//         selectedArticle.value.blocks.forEach((block)=>{
+//           if (block.text === ""){
+//             changeList.push({
+//               method: 'delete',
+//               index: block.index
+//             })
+//           }
+//         })
+
+
+//         newBlocks.forEach((block, index)=>{
+//           if (index===0){
+//             changeList.push({
+//               method: 'change',
+//               index: block.index,
+//               previous_Index:block.previous_index,
+//               next_index: block.next_index,
+//               text: block.text
+//             })
+//           }else{
+//             changeList.push({
+//               method: 'add',
+//               index: block.index,
+//               previous_Index:block.previous_index,
+//               next_index: block.next_index,
+//               text: block.text
+//             })
+//           }
+//         })
+        
+//     });
+
+
+//   //4 後端新增一個api，接收異動API表，修改的就依據index找到該資料修改，新增的就把新block資料寫入資料庫
+// }
+  // const words = (editorRef.value?.innerText || '').match(/\s+|\w+|/g) || []
+
+  // return words.map((word, idx) => {
+  //   const length = words.length
+
+  //   // 空白字元
+  //   if (word.trim() === '') {
+  //     return {
+  //       index: idx,
+  //       text: word,
+  //       text_type: 'blank',
+  //       previous_index: idx === 0 ? null : idx - 1,
+  //       next_index: idx === length - 1 ? null : idx + 1
+  //     }
+  //   }
+
+  //   // 單字
+  //   if (isWord(word)) {
+  //     return {
+  //       index: idx,
+  //       text: word,
+  //       text_type: 'word',
+  //       previous_index: idx === 0 ? null : idx - 1,
+  //       next_index: idx === length - 1 ? null : idx + 1
+  //     }
+  //   }
+
+  //   // 標點或其他
+  //   return {
+  //     index: idx,
+  //     text: word,
+  //     text_type: 'punctuation',
+  //     previous_index: idx === 0 ? null : idx - 1,
+  //     next_index: idx === length - 1 ? null : idx + 1
+  //   }
+  // })
 
 
 const sortedBlocks = computed(() => {
@@ -372,6 +796,11 @@ const sortedBlocks = computed(() => {
 
   return result;
 })
+
+// 監聽 computed 的變化
+watch(sortedBlocks, (newVal) => {
+  //refreshSpan(); // 每次 sortedBlocks 更新時呼叫
+});
 
 
 const parseArticleText = computed(() => {
@@ -430,7 +859,24 @@ function isWord(str) {
 // 呼叫api將文章存入後端
 async function saveArticle() {
 
+  // 將編輯區塊文字轉換後的block寫入 選擇文章物件 內
 
+  alert('重新排序前: ' +JSON.stringify(selectedArticle.value.blocks));
+
+  let str1 = selectedArticle.value.blocks.map(item => item.text).join("");
+  alert(str1);
+  //reLinkBlcoks();
+  reLinkBlocks();
+  
+  alert('重新排序後: ' +JSON.stringify(selectedArticle.value.blocks));
+  let str2 = selectedArticle.value.blocks.map(item => item.text).join("");
+  alert(str2);
+
+  let str3 = sortedBlocks.value.map(item=> item.text).join("");
+  alert(str3)
+
+
+  return;
   Object.assign(selectedArticle.value.blocks,parseArticleText.value);
   Object.assign(articles[selectedIndex.value].blocks, parseArticleText.value);
   articles[selectedIndex.value].blocks = parseArticleText.value;
@@ -569,12 +1015,7 @@ function wordchange(block, index){
 
 
 // 切換某個單字的高亮狀態
-function markWord(block,index) {
-
-  block.marked = !block.marked;  // true → false, false → true
-
-  alert(JSON.stringify(block));
-
+function toggleWord(index) {
   // if (!parsedWords.value[index].clickable || isEditing.value) return
 
   // if (!selectedArticle) return
@@ -761,6 +1202,11 @@ watch(selectedArticle.value, (newItem) => {
   if (noteArea.value.innerText != newItem.note){
     noteArea.value.innerText = newItem.note;
   }
+
+
+  // if (text.value != newItem.content){
+  //   text.value = newItem.content;
+  // }
 })
 
 
@@ -866,7 +1312,7 @@ watch(selectedArticle.value, (newItem) => {
 .note-div{
   width: 400px;
   height: 100%;
-  
+  border-radius: 6px;
 }
 
 
@@ -880,7 +1326,6 @@ watch(selectedArticle.value, (newItem) => {
 
   overflow-x: hidden;
   overflow-y: scroll;
-  border-radius: 15px;
 
 }
 
@@ -888,7 +1333,7 @@ watch(selectedArticle.value, (newItem) => {
 .note-div .record-words-area input{
   /* margin-bottom: 10px; */
   border: 2px solid #ccc;
-
+  border-radius: 5px; 
   /* margin-left: 0; */
 
 }
@@ -915,8 +1360,6 @@ watch(selectedArticle.value, (newItem) => {
   /* border: none; */
   display: block;
   text-align: left;
-  border-radius: 15px;
-  padding: 10px;
 }
 
 .note-div div{
