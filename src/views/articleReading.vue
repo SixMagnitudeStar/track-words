@@ -57,7 +57,8 @@
         :key="index"
         :class="{ 
           word: block.text_type==='word', 
-          active: block.marked
+          active: block.marked,
+          paragraph: block.text_type==='paragraph' 
         }"
         @click="markWord(block,index)"
         v-html="block.text"
@@ -74,10 +75,20 @@
             <input type="text" placeholder="Enter a word & phrase" />
             <button>Add</button>
           </div>
-      
-          <ul>
-            <li v-for="(word, index) in markedwords " :key="index">{{word}}</li>
+          
+          <div class="marked-word-list">
+            <ul>
+            <li v-for="(word, index) in selectedArticle.marked_words" :key="index">
+              <div class="parallel-div">
+                <img @click="deleteMarkedWord(word)" class="remove-marked-word-icon" src="../assets/bin2.png" alt="移除單字" title="移除單字">
+                <span>{{word.word}}</span>
+              </div>
+            </li>
+              
+              
           </ul>
+          </div>
+          
         </div>
       </details>
 
@@ -116,6 +127,7 @@ const selectedArticle = ref({
   'title': '',
   'content': '',
   'blocks': [],
+  'marked_words':[],
   'note': ''
 })
 
@@ -160,12 +172,12 @@ const noteArea = ref(null);
 
 // 編輯器內容更新
 function updateContent(e) {
-  alert('輸入內容')
+  //alert('輸入內容')
   selectedArticle.value.content = e.target.innerText // 或 innerHTML，看你要不要保留格式
   articles[selectedIndex.value].content = e.target.innerText;
   
-  alert('異動內容後值: '+JSON.stringify(selectedArticle.value));
-  alert('異動內容後articles值: '+JSON.stringify(articles));
+  // alert('異動內容後值: '+JSON.stringify(selectedArticle.value));
+  // alert('異動內容後articles值: '+JSON.stringify(articles));
 }
 
 
@@ -214,7 +226,7 @@ const parsedWords = computed(() => {
 
 // 文章標題change事件，將最新的異動text值寫入綁定的標題值變數
 function articleTitleChange(e){
-  alert('輸入標題');
+  //alert('輸入標題');
   selectedArticle.value.title = e.target.innerText;
 
   articles[selectedIndex.value].title = e.target.innerText;
@@ -273,7 +285,7 @@ onMounted(async ()=>{
   await nextTick()
 
   selectArticle(0) // 讀取第一篇文章
-
+  alert(JSON.stringify(selectedArticle.value.blocks));
   noteArea.value.innerText = selectedArticle.value.note;
 
 })
@@ -310,13 +322,13 @@ function createNewArticle(){
   });
 
 
-  alert('檢查: '+articles[0]);
+  //alert('檢查: '+articles[0]);
   // 從文章列表中選取最新這筆文章資料物件
   selectArticle(0); 
 
   // focus標題區塊
   editableTitle.value.focus();
-  alert('focus title');
+//  alert('focus title');
 }
 
 
@@ -375,10 +387,25 @@ const sortedBlocks = computed(() => {
 
 
 const parseArticleText = computed(() => {
-  const words = (editorRef.value?.innerText || '').match(/\s+|\w+|/g) || []
+  // 取得文字並拆成單字、空格或換行
+  const text = editorRef.value?.innerText || '';
+
+  // 正則：單字 (\w+)，空白 (\s+)，換行 (\n)
+  const words = text.match(/\n|\s+|\w+|[^\s\w]/g) || [];
 
   return words.map((word, idx) => {
-    const length = words.length
+    const length = words.length;
+
+    // 段落換行
+    if (word === '\n') {
+      return {
+        index: idx,
+        text: word,
+        text_type: 'paragraph',
+        previous_index: idx === 0 ? null : idx - 1,
+        next_index: idx === length - 1 ? null : idx + 1
+      }
+    }
 
     // 空白字元
     if (word.trim() === '') {
@@ -410,8 +437,47 @@ const parseArticleText = computed(() => {
       previous_index: idx === 0 ? null : idx - 1,
       next_index: idx === length - 1 ? null : idx + 1
     }
-  })
+  });
 })
+// const parseArticleText = computed(() => {
+  
+//   const words = (editorRef.value?.innerText || '').match(/\s+|\w+|/g) || []
+
+//   return words.map((word, idx) => {
+//     const length = words.length
+
+//     // 空白字元
+//     if (word.trim() === '') {
+//       return {
+//         index: idx,
+//         text: word,
+//         text_type: 'blank',
+//         previous_index: idx === 0 ? null : idx - 1,
+//         next_index: idx === length - 1 ? null : idx + 1
+//       }
+//     }
+
+//     // 單字
+//     if (isWord(word)) {
+//       return {
+//         index: idx,
+//         text: word,
+//         text_type: 'word',
+//         previous_index: idx === 0 ? null : idx - 1,
+//         next_index: idx === length - 1 ? null : idx + 1
+//       }
+//     }
+
+//     // 標點或其他
+//     return {
+//       index: idx,
+//       text: word,
+//       text_type: 'punctuation',
+//       previous_index: idx === 0 ? null : idx - 1,
+//       next_index: idx === length - 1 ? null : idx + 1
+//     }
+//   })
+// })
 
 
 
@@ -569,11 +635,38 @@ function wordchange(block, index){
 
 
 // 切換某個單字的高亮狀態
-function markWord(block,index) {
+async function markWord(block,index) {
 
-  block.marked = !block.marked;  // true → false, false → true
+  let mark = !block.marked;
 
-  alert(JSON.stringify(block));
+  block.marked = mark;  // true → false, false → true
+
+
+  if (mark){
+    //
+    selectedArticle.value.marked_words.push({'word':block.text});
+  }else{
+    const idx = selectedArticle.value.marked_words.findIndex(w => w.word === block.text);
+    if (idx > -1) {
+      selectedArticle.value.marked_words.splice(idx, 1); // 刪除該元素
+    }
+  }
+
+
+  const body = {
+    "marked": mark 
+  }
+
+  try{
+    let response
+    response = await api.patch(`/article-blocks/${block.id}/marked`, body);
+    console.log('異動block marked標記', response?.data)
+  
+  }catch(err){
+    console.error('422 details:', err.response?.data?.detail)
+    console.error(err)
+  }
+
 
   // if (!parsedWords.value[index].clickable || isEditing.value) return
 
@@ -735,6 +828,12 @@ async function deleteMarkedWord(word) {
   alert('刪除')
   if (newArticleID_arr.includes(selectedArticle.value.id)) return
   
+
+  const index = selectedArticle.value.marked_words.indexOf(word);
+  if (index > -1) {
+    selectedArticle.value.marked_words.splice(index, 1); // 刪除該元素
+  }
+
   let response
 
   const params = {
@@ -802,7 +901,7 @@ watch(selectedArticle.value, (newItem) => {
     width: 50vw;
     text-align: left;
     font-size: 24px;
-    margin-left: 30px;
+    margin: 30px;
     border: none;
     outline: none;
 }
@@ -811,7 +910,7 @@ watch(selectedArticle.value, (newItem) => {
     width: 50vw;
     text-align: left;
     font-size: 24px;
-    margin-left: 30px;
+    margin: 30px;
     border: none;
     outline: none;
     font-size: blue;
@@ -873,15 +972,19 @@ watch(selectedArticle.value, (newItem) => {
 
 
 .note-div .record-words-area{
-  height: 25vh;
+  /* height: 25vh;
   display: block;
   width: auto; 
   padding: 10px;
 
-  overflow-x: hidden;
-  overflow-y: scroll;
-  border-radius: 15px;
+  border-radius: 15px; */
 
+
+  height: 25vh;
+  display: flex;
+  flex-direction: column; /* 垂直排列 input-bar 與列表 */
+  padding: 10px;
+  border-radius: 15px;
 }
 
 
@@ -909,7 +1012,6 @@ watch(selectedArticle.value, (newItem) => {
   cursor: pointer;
 }
 
-
 .note-div .note-area{
   height: 25vh;
   /* border: none; */
@@ -921,7 +1023,7 @@ watch(selectedArticle.value, (newItem) => {
 
 .note-div div{
   background-color: rgba(240, 240, 240, 5); /* 背景半透明 */
-  border: 1px solid #ccc;   /*外框 */
+  /* border: 1px solid #ccc;    */
   overflow: auto;        /* 讓邊框收齊 */
 }
 
@@ -930,8 +1032,13 @@ watch(selectedArticle.value, (newItem) => {
 }
 
 .input-bar{
-  position: fixed;
+  position: absolute;
   display: flex;
+  gap: 8px; /* input 與 button 間距 */
+  margin-bottom: 8px; /* 與下面 ul 保持距離 */
+
+
+
 }
 
 
@@ -945,5 +1052,42 @@ watch(selectedArticle.value, (newItem) => {
   outline: none;
 }
 
+.paragraph {
+  display: block;   /* 換行 */
+  margin-bottom: 1em; /* 可選，段落間距 */
+}
+
+.marked-word-list{
+  display: block;
+  margin-top: 50px;
+  
+  overflow-x: hidden;
+  overflow-y: scroll;
+  flex: 1;               /* 填滿剩餘空間 */
+
+  border: none;       /* 移除邊框 */
+  
+}
+.marked-word-list ul{
+  list-style: none;   /* 移除圓點 */
+  padding-left: 10px; /* 左側縮排 */
+}
+.marked-word-list li{
+  text-align: left;
+}
+
+
+.remove-marked-word-icon{
+  margin: 2px 10px;
+}
+
+.remove-marked-word-icon:hover{
+  background-color: #e0e0e0; /* 滑上去變淺灰 */
+  cursor: pointer;       
+}
+
+.parallel-div{
+  display: flex;
+}
 
 </style>

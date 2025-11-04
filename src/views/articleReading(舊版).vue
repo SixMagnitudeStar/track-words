@@ -90,7 +90,7 @@
           </div>
       
           <ul>
-            <li v-for="(word, index) in markedwords " :key="index">{{word}}</li>
+            <li v-for="(word, index) in markedwords " :key="index"><img class="icon" src="../assets/bin2.png" alt="移除單字" title="移除單字">{{word}}</li>
           </ul>
         </div>
       </details>
