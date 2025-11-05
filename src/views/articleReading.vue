@@ -60,7 +60,7 @@
           active: block.marked,
           paragraph: block.text_type==='paragraph' 
         }"
-        @click="markWord(block,index)"
+        @click="markWord(block)"
         v-html="block.text"
       ></span>
       </div>
@@ -72,8 +72,8 @@
         <summary>不熟悉單字清單</summary>
         <div class="record-words-area">
           <div class="input-bar">
-            <input type="text" placeholder="Enter a word & phrase" />
-            <button>Add</button>
+            <input v-model="inputWord" type="text" placeholder="Enter a word & phrase" />
+            <button @click="AddMarkedWord">Add</button>
           </div>
           
           <div class="marked-word-list">
@@ -151,7 +151,7 @@ const markedwords = reactive(['apple','banana','x','sawe','asss','banana','x','s
 
 const noteArea = ref(null);
 
-
+const inputWord = ref('');
 
 // articles.value.push("訊息 1","訊息 2AFASFSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA", "訊息 3");
 
@@ -279,13 +279,13 @@ onMounted(async ()=>{
 
   // 載入頁面時抓取文章
   const fetched = await getArticles()
-  alert('fet:'+fetched)
+  // alert('fet:'+fetched)
   articles.push(...fetched)  // 展開陣列
-  alert('articles:'+JSON.stringify(articles));
+ // alert('articles:'+JSON.stringify(articles));
   await nextTick()
 
   selectArticle(0) // 讀取第一篇文章
-  alert(JSON.stringify(selectedArticle.value.blocks));
+  //alert(JSON.stringify(selectedArticle.value.blocks));
   noteArea.value.innerText = selectedArticle.value.note;
 
 })
@@ -634,9 +634,43 @@ function wordchange(block, index){
 // }
 
 
-// 切換某個單字的高亮狀態
-async function markWord(block,index) {
 
+
+// 輸入框單字添加到標記詞列表中
+async function AddMarkedWord(){
+  if (inputWord.value.trim() === '') return;
+
+  selectedArticle.value.marked_words.push(
+    {
+      'word': inputWord.value
+    }
+  )
+
+  const body = {
+    'article_id' : selectedArticle.value.id,
+    'word' : inputWord.value
+  }
+
+  //
+  try{
+    let response
+    response = await api.patch('/markedword', body);
+    console.log('新增 marked標記', response?.data)
+  
+  }catch(err){
+    console.error('422 details:', err.response?.data?.detail)
+    console.error(err)
+  }
+
+  inputWord.value = '';
+}
+
+
+// 滑鼠點擊標記單字
+async function markWord(block) {
+
+  if (block.text_type != 'word') return
+ 
   let mark = !block.marked;
 
   block.marked = mark;  // true → false, false → true
@@ -653,12 +687,16 @@ async function markWord(block,index) {
   }
 
 
-  const body = {
+
+  // 修改block的marked狀態
+  let body = {
     "marked": mark 
   }
 
+  let response
+
   try{
-    let response
+    
     response = await api.patch(`/article-blocks/${block.id}/marked`, body);
     console.log('異動block marked標記', response?.data)
   
@@ -668,27 +706,47 @@ async function markWord(block,index) {
   }
 
 
-  // if (!parsedWords.value[index].clickable || isEditing.value) return
+  // 新增markedword資料
 
-  // if (!selectedArticle) return
+  if (mark){
+    //
+    body = {
+      "article_id" : selectedArticle.value.id,
+      "word": block.text 
+    }
 
-  // const i = String(index);
+    console.log('要送出的 markedword body:', body);
 
-  // // const i = activeIndexes.value.indexOf(index)
-  // // if (i === -1) {
-  // //   activeIndexes.value.push(index)
-  // // } else {
-  // //   activeIndexes.value.splice(i, 1)
-  // // }
+    try{
+      
+      response = await api.post('/markedword', body);
+      console.log('新增 markedword成功', response?.data)
+    
+    }catch(err){
+      console.error('新增markedword失敗');
+      console.error('422 details:', err.response?.data?.detail)
+      console.error(err)
+    }
+  }else{
 
-  // const found = selectedArticle.value.tags_css.find(item => item.index === i)
-  // if (!found){
-  //   selectedArticle.tags_css.push({'index':i})
-  //   saveMarkedword(parsedWords.value[index].html)
-  // }else{
-  //   selectedArticle.tags_css = selectedArticle.tags_css.filter(item => item.index !== i)
-  //   deleteMarkedWord(parsedWords.value[index].html)
-  // }
+    try {
+      const response = await api.delete(`/markedword`, {
+        params: {
+          article_id: selectedArticle.value.id,
+          word: block.text
+        }
+      });
+      console.log('response =>', response?.data);
+      alert('maredword刪除成功');
+    } catch (err) {
+      console.error('刪除失敗', err.response?.data || err.message);
+      alert('maredword刪除失敗')
+    }
+  }
+
+  
+
+
 }
 
 
@@ -709,9 +767,9 @@ function selectArticle(index){
     }
   })
 
-  alert('選擇的文章id:'+selectedArticle.value.id+', 列表index..:'+selectedIndex.value);
-  alert('articles: '+JSON.stringify(articles));
-  alert('selectedArticle: '+ JSON.stringify(selectedArticle.value));
+  // alert('選擇的文章id:'+selectedArticle.value.id+', 列表index..:'+selectedIndex.value);
+  // alert('articles: '+JSON.stringify(articles));
+  // alert('selectedArticle: '+ JSON.stringify(selectedArticle.value));
 
   if (newArticleID_arr.includes(selectedArticle.value.id)){
     alert('新文章')
@@ -777,6 +835,8 @@ function deleteArticle(){
   // 檢查是否為尚未儲存的文章，如果是的話直接離開不用執行後面api
   if (newArticleID_arr.includes(selectedArticle.value.id)) return
 
+
+
   // 呼叫API從資料庫刪除該篇文章
   deleteArticleAPI(id);
 
@@ -825,10 +885,9 @@ async function saveMarkedword(word){
 // 呼叫API，刪除對應的字，返回訊息
 
 async function deleteMarkedWord(word) {
-  alert('刪除')
+
   if (newArticleID_arr.includes(selectedArticle.value.id)) return
   
-
   const index = selectedArticle.value.marked_words.indexOf(word);
   if (index > -1) {
     selectedArticle.value.marked_words.splice(index, 1); // 刪除該元素
@@ -838,15 +897,44 @@ async function deleteMarkedWord(word) {
 
   const params = {
     article_id: selectedArticle.value.id,
-    word: word
+    word: word.word
   }
 
   
-  response = await api.delete('/markedword/',{
-    params: params
-  })
-  console.log(response.data)
-  alert('maredword刪除成功')
+  try {
+    let response = await api.delete('/markedword', { params });
+    console.log('response =>', response.data);
+    alert('maredword刪除成功');
+  } catch (err) {
+    console.error('刪除失敗', err.response?.data || err.message);
+  }
+
+
+  alert(JSON.stringify(selectedArticle.value.blocks));
+  // 從標記單詞列表中刪除移除單詞時，也搜尋看看文章中有沒有標記的單字塊，有的話去取消標記狀態(僅取消第一個)//
+  const block = selectedArticle.value.blocks.find(item => item.text.trim() === word.word.trim() && item.marked);
+  alert(block);
+
+  block.marked = false;
+
+  // 修改block的marked狀態
+  let body = {
+    "marked": false 
+  }
+
+
+
+  try{
+    
+    response = await api.patch(`/article-blocks/${block.id}/marked`, body);
+    console.log('異動block marked標記', response?.data)
+  
+  }catch(err){
+    console.error('422 details:', err.response?.data?.detail)
+    console.error(err)
+  }
+
+
 }
 
 
