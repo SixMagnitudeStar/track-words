@@ -37,7 +37,7 @@
 
     <div class="article-content" >
       <h1 class="article-title"
-          contenteditable="true"
+          :contenteditable="isEditing" 
           placeholder="5sss"
           @input="articleTitleChange"
           @keydown="handleTitleKeydown"
@@ -54,6 +54,7 @@
       <div id="spandiv" v-else>
       <span
         v-for="(block, index) in selectedArticle.blocks"
+        :style="block.style" 
         :key="index"
         :class="{ 
           word: block.text_type==='word', 
@@ -94,7 +95,13 @@
 
       <details>
         <summary>筆記</summary>
-        <div class="note-area" contenteditable="true" ref="noteArea"></div>
+        <div
+            class="note-area"
+            contenteditable="true"
+            ref="noteArea"
+            @input="onNoteInput"
+        ></div>
+        <div class="status">{{ status }}</div>
       </details>
 
 
@@ -288,6 +295,7 @@ onMounted(async ()=>{
   //alert(JSON.stringify(selectedArticle.value.blocks));
   noteArea.value.innerText = selectedArticle.value.note;
 
+
 })
 
 
@@ -307,18 +315,20 @@ function editArticle(){
 function createNewArticle(){
 
   // 設定新文章id，值為先前最新一筆資料的id值+1 
-  alert(articles.length);
+  //alert(articles.length);
   const newArticle_id = articles.length === 0 ? 1 : articles[0].id+1; 
-  alert(newArticle_id);
+  // alert(newArticle_id);
   
   // 將新增文章的id加入列表紀錄
   newArticleID_arr.push(newArticle_id);
 
+  isEditing.value = true;
   articles.unshift({
     id: newArticle_id,
     title: '',
     content: '',
-    blocks: []
+    blocks: [],
+    marked_words: []
   });
 
 
@@ -386,59 +396,125 @@ const sortedBlocks = computed(() => {
 })
 
 
+// const parseArticleText = computed(() => {
+//   // 取得文字並拆成單字、空格或換行
+//   const text = editorRef.value?.innerText || '';
+
+//   // 正則：單字 (\w+)，空白 (\s+)，換行 (\n)
+//   const words = text.match(/\n|\s+|\w+|[^\s\w]/g) || [];
+
+//   return words.map((word, idx) => {
+//     const length = words.length;
+
+//     // 段落換行
+//     if (word === '\n') {
+//       return {
+//         index: idx,
+//         text: word,
+//         text_type: 'paragraph',
+//         previous_index: idx === 0 ? null : idx - 1,
+//         next_index: idx === length - 1 ? null : idx + 1
+//       }
+//     }
+
+//     // 空白字元
+//     if (word.trim() === '') {
+//       return {
+//         index: idx,
+//         text: word,
+//         text_type: 'blank',
+//         previous_index: idx === 0 ? null : idx - 1,
+//         next_index: idx === length - 1 ? null : idx + 1
+//       }
+//     }
+
+//     // 單字
+//     if (isWord(word)) {
+//       return {
+//         index: idx,
+//         text: word,
+//         text_type: 'word',
+//         previous_index: idx === 0 ? null : idx - 1,
+//         next_index: idx === length - 1 ? null : idx + 1
+//       }
+//     }
+
+//     // 標點或其他
+//     return {
+//       index: idx,
+//       text: word,
+//       text_type: 'punctuation',
+//       previous_index: idx === 0 ? null : idx - 1,
+//       next_index: idx === length - 1 ? null : idx + 1
+//     }
+//   });
+// })
+
 const parseArticleText = computed(() => {
-  // 取得文字並拆成單字、空格或換行
-  const text = editorRef.value?.innerText || '';
+  const blocks = [];
+  let idx = 0;
+  const editor = editorRef.value;
+  if (!editor) return [];
 
-  // 正則：單字 (\w+)，空白 (\s+)，換行 (\n)
-  const words = text.match(/\n|\s+|\w+|[^\s\w]/g) || [];
+  function processNode(node, parentStyle = '') {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const words = node.textContent.match(/\n|\s+|\w+|[^\s\w]/g) || [];
+      for (const word of words) {
+        let text_type = 'punctuation';
+        if (word === '\n') text_type = 'paragraph';
+        else if (word.trim() === '') text_type = 'blank';
+        else if (isWord(word)) text_type = 'word';
 
-  return words.map((word, idx) => {
-    const length = words.length;
-
-    // 段落換行
-    if (word === '\n') {
-      return {
-        index: idx,
-        text: word,
-        text_type: 'paragraph',
-        previous_index: idx === 0 ? null : idx - 1,
-        next_index: idx === length - 1 ? null : idx + 1
+        blocks.push({
+          index: idx,
+          text: word,
+          text_type,
+          previous_index: idx === 0 ? null : idx - 1,
+          next_index: null, // 等下再補
+          style: parentStyle
+        });
+        idx++;
       }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const style = node.style.cssText || parentStyle;
+      node.childNodes.forEach(child => processNode(child, style));
     }
+  }
 
-    // 空白字元
-    if (word.trim() === '') {
-      return {
-        index: idx,
-        text: word,
-        text_type: 'blank',
-        previous_index: idx === 0 ? null : idx - 1,
-        next_index: idx === length - 1 ? null : idx + 1
+  editor.childNodes.forEach(child => processNode(child));
+
+  // 設定 next_index
+  for (let i = 0; i < blocks.length; i++) {
+    blocks[i].next_index = i === blocks.length - 1 ? null : i + 1;
+  }
+
+  return blocks;
+});
+
+function parseEditorToBlocks(editor) {
+  const blocks = []
+  let idx = 0
+
+  function traverse(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      // 對每個字拆 block
+      for (const char of node.textContent) {
+        blocks.push({
+          index: idx++,
+          text: char,
+          text_type: char === '\n' ? 'paragraph' : char.trim() === '' ? 'blank' : 'word',
+          style: node.parentElement?.style.cssText || '', // 拿父元素樣式
+          marked: false
+        })
       }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      node.childNodes.forEach(child => traverse(child))
     }
+  }
 
-    // 單字
-    if (isWord(word)) {
-      return {
-        index: idx,
-        text: word,
-        text_type: 'word',
-        previous_index: idx === 0 ? null : idx - 1,
-        next_index: idx === length - 1 ? null : idx + 1
-      }
-    }
-
-    // 標點或其他
-    return {
-      index: idx,
-      text: word,
-      text_type: 'punctuation',
-      previous_index: idx === 0 ? null : idx - 1,
-      next_index: idx === length - 1 ? null : idx + 1
-    }
-  });
-})
+  traverse(editor)
+  return blocks
+}
 // const parseArticleText = computed(() => {
   
 //   const words = (editorRef.value?.innerText || '').match(/\s+|\w+|/g) || []
@@ -497,7 +573,8 @@ function isWord(str) {
 async function saveArticle() {
 
 
-  Object.assign(selectedArticle.value.blocks,parseArticleText.value);
+  //Object.assign(selectedArticle.value.blocks,parseArticleText.value);
+  Object.assign(selectedArticle.value.blocks, parseArticleText.value);
   Object.assign(articles[selectedIndex.value].blocks, parseArticleText.value);
   articles[selectedIndex.value].blocks = parseArticleText.value;
 
@@ -541,6 +618,8 @@ async function saveArticle() {
     console.error(err)
     alert('文章新增失敗')
   }
+
+  isEditing.value = false;
 }
 
 ///////////////////////////////////////////////////////////////
@@ -623,6 +702,55 @@ function wordchange(block, index){
 
 
 
+const saveTimer = ref(null)
+const status = ref('')
+
+function onNoteInput() {
+  // 使用者輸入時，重設計時器
+  console.log("note input");
+  clearTimeout(saveTimer.value)
+  status.value = '輸入中...'
+
+  // 若 5 秒內沒再輸入，就自動儲存
+  saveTimer.value = setTimeout(() => {
+    const note = noteArea.value.innerText.trim()
+    saveNoteToServer(note)
+  }, 5000)
+}
+
+
+
+async function saveNoteToServer(note) {
+  status.value = '💾 儲存中...'
+  console.log('savetoserver')
+  try {
+    // const res = await fetch('/article', {
+    //   method: 'PATCH',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({
+    //     article_id: articleId,
+    //     note: note,
+    //   }),
+    // })
+
+    const body = {
+      article_id : selectedArticle.value.id,
+      note : note
+    }
+
+    const res = await api.patch('/article/note',body)
+
+    // const data = await res.json()
+    console.log('✅ 已自動儲存:', res.data)
+    status.value = '✅ 已儲存'
+  } catch (err) {
+    console.error('❌ 儲存失敗:', err)
+    status.value = '❌ 儲存失敗'
+  }
+
+  // 2 秒後清空狀態文字
+  setTimeout(() => (status.value = ''), 2000)
+}
 
 
 // function onBlur(event) {
@@ -755,11 +883,16 @@ async function markWord(block) {
 
 function selectArticle(index){
 
-
+  
   selectedIndex.value = index;
   //selectedArticle.value = articles[index];
   Object.assign(selectedArticle.value,articles[index]);
 
+  alert('檢查block: '+JSON.stringify(selectedArticle.value.blocks));
+
+  // alert('id:'+selectedArticle.value.id+' 標題:'+selectedArticle.value.title);
+  // alert(JSON.stringify(selectedArticle.value))
+  // alert('marked words: '+JSON.stringify(selectedArticle.value.marked_words));
 
   nextTick(() => {
     if (editorRef.value) {
@@ -799,7 +932,7 @@ async function fetchTextFromAPI() {
       'id': id,
       'title': data.topic || "無標題",
       'content': data.essay || data.text || "",
-      'tags_css': [],
+      'blocks': [],
       'note': data.note || ""
     });
 

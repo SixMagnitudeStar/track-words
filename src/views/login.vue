@@ -47,23 +47,6 @@ const error = ref('')
 const auth = useAuthStore()
 const router = useRouter()  // <-- 取得 router 實例
 
-// async function login() {
-//   try {
-
-//     const response = await axios.post(baseurl + '/login', {
-//       username: username.value,
-//       password: password.value
-//     })
-//     // 假設 API 回傳格式 { token: "abc123" }
-//     auth.setToken(response.data.token)
-//     error.value = ''
-//     alert('Login successful! Token saved.')
-//     router.push('/articleReading')
-//   } catch (err) {
-//     console.error(err)
-//     error.value = 'Login failed'
-//   }
-// }
 async function login() {
   alert(process.env.VUE_APP_API_BASE);
   try {

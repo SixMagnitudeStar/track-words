@@ -1,7 +1,7 @@
 <template>
-  <div id="container">
+  <div id="container" >
 
-    <div  id="toggle-sidebar-btn-wrapper">
+    <div  id="toggle-sidebar-btn-wrapper" v-if="isLoggedIn">
 
       <img id="toggle-sidebar-btn" :src="toggleSideBar_icon"  @click="() => { showPanel = !showPanel; switch_toggleSideIcon(); }" />
     </div>
@@ -34,7 +34,7 @@
 </template>
 <script>
 import api from '@/axios.js'
-
+import { useAuthStore } from '@/auth.js'
 export default {
   name: 'AppSideBar',
   data() {
@@ -45,6 +45,13 @@ export default {
       toggleSideBar_icon : require('../assets/angle-double-left.png')
       
     };
+  },
+  computed: {
+    // 判斷是否登入
+    isLoggedIn() {
+      const auth = useAuthStore()
+      return auth.isLoggedIn
+    }
   },
   methods: {
     addItem() {
@@ -63,19 +70,29 @@ export default {
     },
     
     // 登出
+    // async logout() {
+    //   try {
+    //     await api.post('/logout')
+    //     alert('登出成功!!')
+    //     localStorage.removeItem('token')  // 登出時清掉 token
+    //     this.$router.push('/login')  // <- 這一行就可以跳頁
+    //   } catch (err) {
+    //     console.error('422 details:', err.response?.data?.detail)
+    //     console.error(err)
+    //   }
+    // }
     async logout() {
-      try {
+    try {
         await api.post('/logout')
-        alert('登出成功!!')
-        localStorage.removeItem('token')  // 登出時清掉 token
-        this.$router.push('/login')  // <- 這一行就可以跳頁
+        const auth = useAuthStore()
+        auth.clearToken()       // ← 這裡清掉 Pinia token 也會觸發 computed
+        this.$router.push('/login')
       } catch (err) {
-        console.error('422 details:', err.response?.data?.detail)
         console.error(err)
       }
     }
 
-  }
+    }
 };
 
 
