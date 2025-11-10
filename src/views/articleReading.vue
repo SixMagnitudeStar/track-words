@@ -450,6 +450,46 @@ const sortedBlocks = computed(() => {
 //   });
 // })
 
+// const parseArticleText = computed(() => {
+//   const blocks = [];
+//   let idx = 0;
+//   const editor = editorRef.value;
+//   if (!editor) return [];
+
+//   function processNode(node, parentStyle = '') {
+//     if (node.nodeType === Node.TEXT_NODE) {
+//       const words = node.textContent.match(/\n|\s+|\w+|[^\s\w]/g) || [];
+//       for (const word of words) {
+//         let text_type = 'punctuation';
+//         if (word === '\n') text_type = 'paragraph';
+//         else if (word.trim() === '') text_type = 'blank';
+//         else if (isWord(word)) text_type = 'word';
+
+//         blocks.push({
+//           index: idx,
+//           text: word,
+//           text_type,
+//           previous_index: idx === 0 ? null : idx - 1,
+//           next_index: null, // 等下再補
+//           style: parentStyle
+//         });
+//         idx++;
+//       }
+//     } else if (node.nodeType === Node.ELEMENT_NODE) {
+//       const style = node.style.cssText || parentStyle;
+//       node.childNodes.forEach(child => processNode(child, style));
+//     }
+//   }
+
+//   editor.childNodes.forEach(child => processNode(child));
+
+//   // 設定 next_index
+//   for (let i = 0; i < blocks.length; i++) {
+//     blocks[i].next_index = i === blocks.length - 1 ? null : i + 1;
+//   }
+
+//   return blocks;
+// });
 const parseArticleText = computed(() => {
   const blocks = [];
   let idx = 0;
@@ -470,13 +510,27 @@ const parseArticleText = computed(() => {
           text: word,
           text_type,
           previous_index: idx === 0 ? null : idx - 1,
-          next_index: null, // 等下再補
+          next_index: null, // 稍後補
           style: parentStyle
         });
         idx++;
       }
     } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const style = node.style.cssText || parentStyle;
+      // 取得最終計算後的 style
+      const computed = window.getComputedStyle(node);
+      const currentStyle = `
+        font-weight: ${computed.fontWeight};
+        font-size: ${computed.fontSize};
+        color: ${computed.color};
+        font-style: ${computed.fontStyle};
+        text-decoration: ${computed.textDecorationLine};
+      `.replace(/\s+/g, ' ').trim(); // 清理多餘空白
+
+      const style = parentStyle ? parentStyle + ';' + currentStyle : currentStyle;
+
+      // 可以保留 tag 名稱，用於渲染 H1/H2
+      const tag = node.tagName.toLowerCase();
+
       node.childNodes.forEach(child => processNode(child, style));
     }
   }
@@ -491,30 +545,6 @@ const parseArticleText = computed(() => {
   return blocks;
 });
 
-function parseEditorToBlocks(editor) {
-  const blocks = []
-  let idx = 0
-
-  function traverse(node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      // 對每個字拆 block
-      for (const char of node.textContent) {
-        blocks.push({
-          index: idx++,
-          text: char,
-          text_type: char === '\n' ? 'paragraph' : char.trim() === '' ? 'blank' : 'word',
-          style: node.parentElement?.style.cssText || '', // 拿父元素樣式
-          marked: false
-        })
-      }
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      node.childNodes.forEach(child => traverse(child))
-    }
-  }
-
-  traverse(editor)
-  return blocks
-}
 // const parseArticleText = computed(() => {
   
 //   const words = (editorRef.value?.innerText || '').match(/\s+|\w+|/g) || []
@@ -1109,8 +1139,8 @@ watch(selectedArticle.value, (newItem) => {
   
 }
 .word.active {
-  color: red;
-  font-weight: bold;
+  color: red !important;
+  font-weight: bold !important; 
 }
 
 .word:hover{
