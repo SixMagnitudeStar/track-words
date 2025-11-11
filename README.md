@@ -1,4 +1,4 @@
-# learntools
+# track-words
 
 ## Project setup
 ```

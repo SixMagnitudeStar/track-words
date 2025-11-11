@@ -70,12 +70,6 @@ async function login() {
 </script>
 
 <style scoped>
-.login-container {
-  background-color: rgba(255, 255, 255, 0.8);
-  padding: 20px;
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
 
 .login-container input {
   width: 95%;
