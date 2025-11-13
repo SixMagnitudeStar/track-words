@@ -3,41 +3,80 @@
 
   <div id="ELP-page">
     <div>
-      <h1>Welcome to English Listening Practice Page</h1>
+      <h1>聽力複習</h1>
+      <h3>將標記單字載入聆聽列表 / 手動添加單字到列表，接著點擊喇叭開始聆聽</h3>
     </div>
 
-    <div>
-      <input v-model="vocab" type="text" placeholder="Enter a word & phrase" />
-      &nbsp;
-      <button @click="speak(vocab)">🔊 listening</button>&nbsp;
-      <button @click="appendVocab(vocab)">Add to vocabList</button>
-    </div>
+    
 
+    <div class="list-title-div">
+        <h2>詞彙列表&nbsp;</h2>
+        <div class="tooltip" >
+          <span>🎲🔊</span>
+          <span class="tooltiptext">隨機從列表中撥放單字聆聽</span>
+        </div>
+
+        &nbsp;|&nbsp; 
+        <div class="tooltip" >
+          <img @click="refreshListeningList" class="refresh_icon" alt="Refresh list" src="@/assets/rotate.png">
+          <span class="tooltiptext">刷新列表</span>
+        </div>
+        &nbsp;|&nbsp;&nbsp;&nbsp;   
+          <div class="tooltip">
+            <div class="parallel-div">
+              <img src="@/assets/sticky-note.png" alt="">
+              <img class="arrow-down icon" src="@/assets/forward.png"  alt="將標記單字載入聆聽列表" >
+            </div>
+            
+            <span class="tooltiptext">將標記單字載入聆聽列表</span>
+          </div>
+          <!-- <sapn>將標記單字載入聆聽列表/手動添加單字到列表</sapn> -->
+          <span>
+             
+                <img  class="or-icon" src="@/assets/or-arrows.png" title="將標記單字載入聆聽列表 OR 手動添加單字到列表"  alt="OR" />
+          
+          </span>
+          <div>
+            <input v-model="vocab" type="text" placeholder="Enter a word & phrase"  @keyup.enter="appendVocab(vocab)"/>
+            &nbsp;
+            <button @click="speak(vocab)">🔊 listening</button>&nbsp;
+            <button @click="appendVocab(vocab)">Add to vocabList</button>
+          </div>
+
+    </div> 
+    <!-- <div class="listening-div">
+      <span>🎲🔊</span>
+      <img @click="refreshListeningList" class="refresh_icon" alt="Refresh" src="@/assets/rotate.png" title="refresh listeningList"> 
+      ：<button @click="randomListening"> random listening</button> &nbsp;
+      <button @click="reListening">🔊 listening again</button><span>{{listeningVocab }}</span>
+    
+    </div> -->
+        
     <div id="ListDiv">
       <div>
-        <h2>詞彙列表：</h2>
         <ul>
           <li v-for="(vocab, index) in vocabList" :key="index">{{vocab}}
             <div class="tooltip">
-             <img class="bin" src="@/assets/bin.png" @click="removeVocab(index)" alt="delete" >
-            <span class="tooltiptext">Delete vocab</span>
-          </div>
+              <img class="bin" src="@/assets/bin.png" @click="removeVocab(index)" alt="delete" >
+              <span class="tooltiptext">Delete vocab</span>
+            </div>
            
           </li>
         </ul>
       </div>
-        <div>
-        <h2>聆聽列表
+      <div>
+        <!-- <h2>聆聽列表
           <span>🎲🔊</span>
           <img @click="refreshListeningList" class="refresh_icon" alt="Refresh" src="@/assets/rotate.png" title="refresh listeningList"> 
           ：<button @click="randomListening"> random listening</button> &nbsp;
           <button @click="reListening">🔊 listening again</button><span>{{listeningVocab }}</span> &nbsp;
-        </h2>
+        </h2> -->
         <ul>
           <li v-for="(vocab, index) in listeningList" :key="index">{{vocab}}</li>
         </ul>
       </div>
     </div>
+
   </div>
   </template>
   
@@ -60,6 +99,11 @@
         doRandomListening(this);
       },
       appendVocab(vocab){
+        if (vocab.trim() === ''){
+          alert('請輸入要添加的單字!');
+          return;
+        }
+
         this.vocabList.push(vocab);
         this.vocab = '';
         this.listeningList = [...this.vocabList];
@@ -171,8 +215,18 @@ button {
   cursor: pointer;
 }
 
+
+
 li{
   height: 30px;
+  display: flex;
+  align-items: center;  /* 垂直置中 */
+}
+
+ul{
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 #ELP-page {
@@ -184,15 +238,26 @@ li{
 }
 
 .bin{
-  height: 25px;
-  width: 25px;
+  height: 20px;
+  width: 20px;
   cursor: pointer;
+  vertical-align: middle;
 }
 
 #ListDiv{
   display: flex;
+  /* align-items: center;  垂直置中 */
+  align-items: flex-start; /* 讓兩個子div都靠上對齊 */
+  gap: 20px;               /* 保持間距，可依需要調整 */
 }
 
+.or-icon{
+  margin: 10px 40px;
+  height: 30px;
+  width: 40px;
+  display: block;
+  cursor: pointer;
+}
 
 
 .tooltip {
@@ -221,4 +286,25 @@ li{
   visibility: visible;
   opacity: 1;
 }
+
+
+.arrow-down {
+  transform: rotate(90deg);
+  height: 25px;
+  width: 25px;
+  cursor: pointer;
+  margin-top: 7px;
+  margin-left: 5px;
+}
+
+.list-title-div{
+  display: flex;
+  align-items: center;   /* 垂直置中 */
+}
+
+.listening-div{
+  text-align: left;
+
+}
+
 </style>
