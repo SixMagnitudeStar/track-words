@@ -1337,8 +1337,6 @@ watch(selectedArticle.value, (newItem) => {
   cursor: pointer;       
 }
 
-.parallel-div{
-  display: flex;
-}
+
 
 </style>
