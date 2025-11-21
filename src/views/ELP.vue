@@ -2,89 +2,100 @@
 <template>
 
   <div id="ELP-page">
-    <div>
-      <h1>聽力複習</h1>
-      <h3>將標記單字載入聆聽列表 / 手動添加單字到列表，接著點擊喇叭開始聆聽</h3>
-    </div>
-
-    
-
-    <div class="list-title-div">
-        <h2>詞彙列表&nbsp;</h2>
-        <div class="tooltip" >
-          <span>🎲🔊</span>
-          <span class="tooltiptext">隨機從列表中撥放單字聆聽</span>
+    <div v-if="mode===1">
+        <div>
+          <h1>聽力複習</h1>
+          <h3>手動添加 / 從標記單字中載入你要聽力複習的單字</h3>
+          <h3>建立好，接著點擊喇叭開始聆聽</h3>
         </div>
 
-        &nbsp;|&nbsp; 
-        <div class="tooltip" >
-          <img @click="refreshListeningList" class="refresh_icon" alt="Refresh list" src="@/assets/rotate.png">
-          <span class="tooltiptext">刷新列表</span>
-        </div>
-        &nbsp;|&nbsp;&nbsp;&nbsp;   
-          <div class="tooltip">
-            <div class="parallel-div">
-              <img src="@/assets/sticky-note.png" alt="">
-              <img class="arrow-down icon" src="@/assets/forward.png"  alt="將標記單字載入聆聽列表" >
-            </div>
-            
-            <span class="tooltiptext">將標記單字載入聆聽列表</span>
-          </div>
-          <!-- <sapn>將標記單字載入聆聽列表/手動添加單字到列表</sapn> -->
-          <span>
-             
-                <img  class="or-icon" src="@/assets/or-arrows.png" title="將標記單字載入聆聽列表 OR 手動添加單字到列表"  alt="OR" />
-          
-          </span>
-          <div>
-            <input v-model="vocab" type="text" placeholder="Enter a word & phrase"  @keyup.enter="appendVocab(vocab)"/>
-            &nbsp;
-            <button @click="speak(vocab)">🔊 listening</button>&nbsp;
-            <button @click="appendVocab(vocab)">Add to vocabList</button>
-          </div>
-
-    </div> 
-    <!-- <div class="listening-div">
-      <span>🎲🔊</span>
-      <img @click="refreshListeningList" class="refresh_icon" alt="Refresh" src="@/assets/rotate.png" title="refresh listeningList"> 
-      ：<button @click="randomListening"> random listening</button> &nbsp;
-      <button @click="reListening">🔊 listening again</button><span>{{listeningVocab }}</span>
-    
-    </div> -->
         
-    <div id="ListDiv">
-      <div>
-        <ul>
-          <li v-for="(vocab, index) in vocabList" :key="index">{{vocab}}
-            <div class="tooltip">
-              <img class="bin" src="@/assets/bin.png" @click="removeVocab(index)" alt="delete" >
-              <span class="tooltiptext">Delete vocab</span>
+
+        <div class="list-title-div">
+            <h2>詞彙列表&nbsp;</h2>
+            <div class="tooltip" >
+              <span @click="randomListening">🎲🔊</span>
+              <span class="tooltiptext">隨機從列表中撥放單字聆聽</span>
             </div>
-           
-          </li>
-        </ul>
-      </div>
-      <div>
-        <!-- <h2>聆聽列表
+
+            &nbsp;|&nbsp; 
+            <div class="tooltip" >
+              <img @click="refreshListeningList" class="refresh_icon" alt="Refresh list" src="@/assets/rotate.png">
+              <span class="tooltiptext">刷新列表</span>
+            </div>
+            &nbsp;|&nbsp;&nbsp;&nbsp;   
+              <div class="tooltip" @click="loadMarkedWords()">
+                <div class="parallel-div">
+                  <img src="@/assets/sticky-note.png" alt="">
+                  <img class="arrow-down icon" src="@/assets/forward.png"  alt="將標記單字載入聆聽列表" >
+                </div>
+                
+                <span class="tooltiptext">將標記單字載入聆聽列表</span>
+              </div>
+              <!-- <sapn>將標記單字載入聆聽列表/手動添加單字到列表</sapn> -->
+              <span>
+                
+                    <img  class="or-icon" src="@/assets/or-arrows.png" title="將標記單字載入聆聽列表 OR 手動添加單字到列表"  alt="OR" />
+              
+              </span>
+              <div>
+                <input v-model="vocab" type="text" placeholder="Enter a word & phrase"  @keyup.enter="appendVocab(vocab)"/>
+                &nbsp;
+                <button @click="speak(vocab)">🔊 listening</button>&nbsp;
+                <button @click="appendVocab(vocab)">Add to vocabList</button>
+              </div>
+
+        </div> 
+        <!-- <div class="listening-div">
           <span>🎲🔊</span>
           <img @click="refreshListeningList" class="refresh_icon" alt="Refresh" src="@/assets/rotate.png" title="refresh listeningList"> 
           ：<button @click="randomListening"> random listening</button> &nbsp;
-          <button @click="reListening">🔊 listening again</button><span>{{listeningVocab }}</span> &nbsp;
-        </h2> -->
-        <ul>
-          <li v-for="(vocab, index) in listeningList" :key="index">{{vocab}}</li>
-        </ul>
-      </div>
-    </div>
+          <button @click="reListening">🔊 listening again</button><span>{{listeningVocab }}</span>
+        
+        </div> -->
 
+        <div id="ListDiv">
+          <div>
+            <ul>
+              <li v-for="(vocab, index) in vocabList" :key="index">{{vocab}}
+                <div class="tooltip">
+                  <img class="bin" src="@/assets/bin.png" @click="removeVocab(index)" alt="delete" >
+                  <span class="tooltiptext">Delete vocab</span>
+                </div>
+              
+              </li>
+            </ul>
+          </div>
+          <div>
+            <!-- <h2>聆聽列表
+              <span>🎲🔊</span>
+              <img @click="refreshListeningList" class="refresh_icon" alt="Refresh" src="@/assets/rotate.png" title="refresh listeningList"> 
+              ：<button @click="randomListening"> random listening</button> &nbsp;
+              <button @click="reListening">🔊 listening again</button><span>{{listeningVocab }}</span> &nbsp;
+            </h2> -->
+            <ul>
+              <li v-for="(vocab, index) in listeningList" :key="index">{{vocab}}</li>
+            </ul>
+          </div>
+        </div>
+        <hr>
+        <h2>隨機聆聽測驗</h2>
+    </div>
+    <div v-else>
+      <h3>測試</h3>
+    </div>
   </div>
+ 
   </template>
   
   <script>
+  
+  import api from '@/axios.js'
   export default {
     name: 'ELPView',
     data() {
       return {
+        mode : 1,
         vocab: '',
         vocabList: [],
         listeningList: [],
@@ -135,7 +146,12 @@
 
         // 將單字從詞彙列表中移除
         this.vocabList.splice(vocabIndex, 1);
+      },
+      loadMarkedWords(){
+        doloadMarkedWords(this)
       }
+
+      
 
     }
   }
@@ -155,6 +171,22 @@
 
 
 
+
+async function doloadMarkedWords(vm){
+
+  try{
+    const response = await api.get("/markedwords");
+
+    response.data.words.forEach((item) => {
+      vm.listeningList.push(item.word)
+      vm.vocabList.push(item.word)
+    })
+    console.log('標記單字載入詞彙列表成功')
+
+  }catch(err){
+    console.error('標記單字載入詞彙列表失敗',err)
+  }
+}
 
   function doRandomListening(vm){
 
