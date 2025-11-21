@@ -2,15 +2,17 @@
 
   <div id="app">
     <nav>
-      <router-link class="hidden-link" to="/login">登入</router-link> 
-      <router-link class="hidden-link" to="/">首頁</router-link> 
-      <router-link class="hidden-link" to="/ELP">English Listening Practice</router-link> 
-      <router-link class="hidden-link" to="/UnfamiliarWordsArea">不熟單字記錄區</router-link> 
-      <router-link class="hidden-link" to="/articleReading">文章閱讀區</router-link> 
-      <router-link class="hidden-link" to ="/personalSetting">個人設定</router-link> 
+      <router-link to="/login">登入</router-link> |
+      <router-link to="/signup">註冊</router-link> |
+      <router-link to="/">首頁</router-link> |
+      <router-link to="/ELP">English Listening Practice</router-link> |
+      <router-link to="/UnfamiliarWordsArea">不熟單字記錄區</router-link> |
+      <router-link to="/articleReading">文章閱讀區</router-link> |
+      <router-link to ="/personalSetting">個人設定</router-link> |
     </nav>
     <AppSideBar></AppSideBar>
-    <router-view></router-view>
+    
+    <router-view class="router-view"></router-view>
   </div>
   <!-- <img alt="Vue logo" src="./assets/logo.png"> -->
   <!-- <HelloWorld msg="Welcome to Your Vue.js App"/> -->
@@ -59,6 +61,10 @@ body{
   align-items: center;
   min-height: 100vh;
   margin: 0;
+
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* 背景固定，不隨滾動拉伸 */
+  background-position: center center; /* 居中顯示 */
 }
 
 
@@ -138,5 +144,14 @@ body{
   cursor: pointer;           /* 滑鼠顯示小手 */
 }
 
+
+.router-view{
+  display: block;
+  margin-top: 5vh;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
 
 </style>

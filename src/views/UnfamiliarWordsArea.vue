@@ -128,7 +128,7 @@ export default {
 <style scoped>
 .vocab-container {
   max-width: 600px;
-  margin: auto;
+
   padding: 1rem;
   font-family: sans-serif;
 }
