@@ -490,20 +490,23 @@ const sortedBlocks = computed(() => {
 
 //   return blocks;
 // });
+
+
 const parseArticleText = computed(() => {
-  const blocks = [];
-  let idx = 0;
-  const editor = editorRef.value;
-  if (!editor) return [];
+  const blocks = []
+  let idx = 0
+  const editor = editorRef.value
+  if (!editor) return []
 
   function processNode(node, parentStyle = '') {
     if (node.nodeType === Node.TEXT_NODE) {
-      const words = node.textContent.match(/\n|\s+|\w+|[^\s\w]/g) || [];
+      // 將文字拆成字、空格、換行、標點
+      const words = node.textContent.match(/\n|\s+|\w+|[^\s\w]/g) || []
       for (const word of words) {
-        let text_type = 'punctuation';
-        if (word === '\n') text_type = 'paragraph';
-        else if (word.trim() === '') text_type = 'blank';
-        else if (isWord(word)) text_type = 'word';
+        let text_type = 'punctuation'
+        if (word === '\n') text_type = 'paragraph'
+        else if (word.trim() === '') text_type = 'blank'
+        else if (isWord(word)) text_type = 'word'
 
         blocks.push({
           index: idx,
@@ -512,38 +515,123 @@ const parseArticleText = computed(() => {
           previous_index: idx === 0 ? null : idx - 1,
           next_index: null, // 稍後補
           style: parentStyle
-        });
-        idx++;
+        })
+        idx++
       }
     } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const tag = node.tagName.toLowerCase()
+
+      // 如果是段落元素，先插入 paragraph block
+      if (tag === 'p' || tag === 'div') {
+        // 避免第一個 block 就是換行造成多餘空白
+        if (idx > 0) {
+          blocks.push({
+            index: idx,
+            text: '\n',
+            text_type: 'paragraph',
+            previous_index: idx === 0 ? null : idx - 1,
+            next_index: null,
+            style: parentStyle
+          })
+          idx++
+        }
+      }
+
+      // 如果是 <br>，也視為換行
+      if (tag === 'br') {
+        blocks.push({
+          index: idx,
+          text: '\n',
+          text_type: 'paragraph',
+          previous_index: idx === 0 ? null : idx - 1,
+          next_index: null,
+          style: parentStyle
+        })
+        idx++
+      }
+
       // 取得最終計算後的 style
-      const computed = window.getComputedStyle(node);
+      const computedStyle = window.getComputedStyle(node)
       const currentStyle = `
-        font-weight: ${computed.fontWeight};
-        font-size: ${computed.fontSize};
-        color: ${computed.color};
-        font-style: ${computed.fontStyle};
-        text-decoration: ${computed.textDecorationLine};
-      `.replace(/\s+/g, ' ').trim(); // 清理多餘空白
+        font-weight: ${computedStyle.fontWeight};
+        font-size: ${computedStyle.fontSize};
+        color: ${computedStyle.color};
+        font-style: ${computedStyle.fontStyle};
+        text-decoration: ${computedStyle.textDecorationLine};
+      `.replace(/\s+/g, ' ').trim()
 
-      const style = parentStyle ? parentStyle + ';' + currentStyle : currentStyle;
+      const style = parentStyle ? parentStyle + ';' + currentStyle : currentStyle
 
-      // 可以保留 tag 名稱，用於渲染 H1/H2
-      const tag = node.tagName.toLowerCase();
-
-      node.childNodes.forEach(child => processNode(child, style));
+      // 遞迴處理子節點
+      node.childNodes.forEach(child => processNode(child, style))
     }
   }
 
-  editor.childNodes.forEach(child => processNode(child));
+  editor.childNodes.forEach(child => processNode(child))
 
   // 設定 next_index
   for (let i = 0; i < blocks.length; i++) {
-    blocks[i].next_index = i === blocks.length - 1 ? null : i + 1;
+    blocks[i].next_index = i === blocks.length - 1 ? null : i + 1
   }
 
-  return blocks;
-});
+  return blocks
+})
+
+
+// const parseArticleText = computed(() => {
+//   const blocks = [];
+//   let idx = 0;
+//   const editor = editorRef.value;
+//   if (!editor) return [];
+
+//   function processNode(node, parentStyle = '') {
+//     if (node.nodeType === Node.TEXT_NODE) {
+//       const words = node.textContent.match(/\n|\s+|\w+|[^\s\w]/g) || [];
+//       for (const word of words) {
+//         let text_type = 'punctuation';
+//         if (word === '\n') text_type = 'paragraph';
+//         else if (word.trim() === '') text_type = 'blank';
+//         else if (isWord(word)) text_type = 'word';
+
+//         blocks.push({
+//           index: idx,
+//           text: word,
+//           text_type,
+//           previous_index: idx === 0 ? null : idx - 1,
+//           next_index: null, // 稍後補
+//           style: parentStyle
+//         });
+//         idx++;
+//       }
+//     } else if (node.nodeType === Node.ELEMENT_NODE) {
+//       // 取得最終計算後的 style
+//       const computed = window.getComputedStyle(node);
+//       const currentStyle = `
+//         font-weight: ${computed.fontWeight};
+//         font-size: ${computed.fontSize};
+//         color: ${computed.color};
+//         font-style: ${computed.fontStyle};
+//         text-decoration: ${computed.textDecorationLine};
+//       `.replace(/\s+/g, ' ').trim(); // 清理多餘空白
+
+//       const style = parentStyle ? parentStyle + ';' + currentStyle : currentStyle;
+
+//       // 可以保留 tag 名稱，用於渲染 H1/H2
+//       const tag = node.tagName.toLowerCase();
+
+//       node.childNodes.forEach(child => processNode(child, style));
+//     }
+//   }
+
+//   editor.childNodes.forEach(child => processNode(child));
+
+//   // 設定 next_index
+//   for (let i = 0; i < blocks.length; i++) {
+//     blocks[i].next_index = i === blocks.length - 1 ? null : i + 1;
+//   }
+
+//   return blocks;
+// });
 
 // const parseArticleText = computed(() => {
   
@@ -918,7 +1006,7 @@ function selectArticle(index){
   //selectedArticle.value = articles[index];
   Object.assign(selectedArticle.value,articles[index]);
 
-  alert('檢查block: '+JSON.stringify(selectedArticle.value.blocks));
+  //alert('檢查block: '+JSON.stringify(selectedArticle.value.blocks));
 
   // alert('id:'+selectedArticle.value.id+' 標題:'+selectedArticle.value.title);
   // alert(JSON.stringify(selectedArticle.value))
@@ -935,10 +1023,10 @@ function selectArticle(index){
   // alert('selectedArticle: '+ JSON.stringify(selectedArticle.value));
 
   if (newArticleID_arr.includes(selectedArticle.value.id)){
-    alert('新文章')
+    //alert('新文章')
     isEditing.value = true
   }else{
-    alert('舊文章')
+    //alert('舊文章')
     isEditing.value = false
   }
 }
@@ -1073,10 +1161,10 @@ async function deleteMarkedWord(word) {
   }
 
 
-  alert(JSON.stringify(selectedArticle.value.blocks));
+  //alert(JSON.stringify(selectedArticle.value.blocks));
   // 從標記單詞列表中刪除移除單詞時，也搜尋看看文章中有沒有標記的單字塊，有的話去取消標記狀態(僅取消第一個)//
   const block = selectedArticle.value.blocks.find(item => item.text.trim() === word.word.trim() && item.marked);
-  alert(block);
+  //alert(block);
 
   block.marked = false;
 
