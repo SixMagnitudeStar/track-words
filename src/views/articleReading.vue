@@ -44,6 +44,10 @@
           ref="editableTitle"
           spellcheck="false"
       ></h1>
+      <div v-if="onloading" class="loading-container">
+          <div class="spinner"></div>
+          <div class="loading-text">載入中...</div>
+      </div>
       <div v-if="isEditing" 
         class="article-editor" 
         contenteditable="true"
@@ -51,7 +55,7 @@
          ref="editorRef"
         ></div>
         
-      <div id="spandiv" v-else>
+      <div id="spandiv" v-else v-show="!onloading">
       <span
         v-for="(block, index) in selectedArticle.blocks"
         :style="block.style" 
@@ -70,11 +74,24 @@
     <div class="note-div">
 
       <details open>
-        <summary>不熟悉單字清單</summary>
-        <div class="record-words-area">
+        <summary>
+          不熟悉單字清單
+          
+        </summary>
+        <div class="record-words-area">      
           <div class="input-bar">
-            <input v-model="inputWord" type="text" placeholder="Enter a word & phrase" />
-            <button @click="AddMarkedWord">Add</button>
+            <span  @click="toggleTranslation" class="translation-bar" >
+              <img src="../assets/translate.png" title="翻譯標記單字..">
+              <span>翻譯...</span>
+              <!-- ✔ 勾勾 -->
+
+              <span class="checkmark" v-if="translated">✔</span>
+            </span>
+            <span class="parallel-div">
+              <input v-model="inputWord" type="text" placeholder="Enter a word & phrase" />
+              <button @click="AddMarkedWord">Add</button>
+            </span>
+            
           </div>
           
           <div class="marked-word-list">
@@ -139,7 +156,11 @@ const selectedArticle = ref({
 })
 
 
+const translated = ref(false);
 
+function toggleTranslation() {
+  translated.value = !translated.value;
+}
 
 // const articleText = ref("")
 
@@ -282,21 +303,32 @@ async function getArticles() {
 }
 
 
+
 onMounted(async ()=>{
 
-  // 載入頁面時抓取文章
-  const fetched = await getArticles()
-  // alert('fet:'+fetched)
-  articles.push(...fetched)  // 展開陣列
- // alert('articles:'+JSON.stringify(articles));
-  await nextTick()
+  loadArticles();
+})
 
-  selectArticle(0) // 讀取第一篇文章
-  //alert(JSON.stringify(selectedArticle.value.blocks));
+
+// loading狀態
+let onloading = ref(false)
+
+// 呼叫API抓取文章資料
+const loadArticles = async () => {
+  onloading.value = true;
+
+  const fetched = await getArticles();
+  articles.length = 0;
+  articles.push(...fetched);
+
+  await nextTick();
+
+  selectArticle(0);
   noteArea.value.innerText = selectedArticle.value.note;
 
+  onloading.value = false;
+};
 
-})
 
 
 function editArticle(){
@@ -345,153 +377,32 @@ function createNewArticle(){
 
 // 動態偵測文章邊提區塊，將新文章內容轉為單字block
 const editorRef = ref(null)
-// const  icleText = computed(() => {
-//   //
-//   const words = (editorRef.value?.innerText || '').match(/\s+|\w+|/g) || []
 
-//   return words.map((word) => {
-//     // 空白字元
-//     if (word.trim() === ''){
-//       return { text: word ,text_type:'blank'}
-//     }
 
-//     // 單字
-//     if (isWord(word)){
-//       return { text: word ,text_type:'word'}
-//     }
-    
-//     //標點或其他
-//     return  { text: word ,text_type:'punctuation'}
-//   })
+
+// const sortedBlocks = computed(() => {
+//   const blocks = selectedArticle.value?.blocks || [];
+//   if (!blocks.length) return [];
+
+//     // 找到開頭節點（previous_index 為 null）
+//   let current = blocks[0];
+//   const result = [];
+
+//   // 沿 next_index 串起來
+//   while (current) {
+//     result.push(current);
+//     if (current.next_index === null) break;
+//     current = blocks[current.next_index];
+//   }
+
+
+//   return result;
 // })
 
 
-// 使用響應式赋值代替 Object.assign，確保seletecArticle的異動能被追蹤
-function updateSelectedArticle(fetchedArticle) {
-  Object.keys(fetchedArticle).forEach(key => {
-    selectedArticle.value[key] = fetchedArticle[key]
-  })
-}
 
 
-
-
-const sortedBlocks = computed(() => {
-  const blocks = selectedArticle.value?.blocks || [];
-  if (!blocks.length) return [];
-
-    // 找到開頭節點（previous_index 為 null）
-  let current = blocks[0];
-  const result = [];
-
-  // 沿 next_index 串起來
-  while (current) {
-    result.push(current);
-    if (current.next_index === null) break;
-    current = blocks[current.next_index];
-  }
-
-
-  return result;
-})
-
-
-// const parseArticleText = computed(() => {
-//   // 取得文字並拆成單字、空格或換行
-//   const text = editorRef.value?.innerText || '';
-
-//   // 正則：單字 (\w+)，空白 (\s+)，換行 (\n)
-//   const words = text.match(/\n|\s+|\w+|[^\s\w]/g) || [];
-
-//   return words.map((word, idx) => {
-//     const length = words.length;
-
-//     // 段落換行
-//     if (word === '\n') {
-//       return {
-//         index: idx,
-//         text: word,
-//         text_type: 'paragraph',
-//         previous_index: idx === 0 ? null : idx - 1,
-//         next_index: idx === length - 1 ? null : idx + 1
-//       }
-//     }
-
-//     // 空白字元
-//     if (word.trim() === '') {
-//       return {
-//         index: idx,
-//         text: word,
-//         text_type: 'blank',
-//         previous_index: idx === 0 ? null : idx - 1,
-//         next_index: idx === length - 1 ? null : idx + 1
-//       }
-//     }
-
-//     // 單字
-//     if (isWord(word)) {
-//       return {
-//         index: idx,
-//         text: word,
-//         text_type: 'word',
-//         previous_index: idx === 0 ? null : idx - 1,
-//         next_index: idx === length - 1 ? null : idx + 1
-//       }
-//     }
-
-//     // 標點或其他
-//     return {
-//       index: idx,
-//       text: word,
-//       text_type: 'punctuation',
-//       previous_index: idx === 0 ? null : idx - 1,
-//       next_index: idx === length - 1 ? null : idx + 1
-//     }
-//   });
-// })
-
-// const parseArticleText = computed(() => {
-//   const blocks = [];
-//   let idx = 0;
-//   const editor = editorRef.value;
-//   if (!editor) return [];
-
-//   function processNode(node, parentStyle = '') {
-//     if (node.nodeType === Node.TEXT_NODE) {
-//       const words = node.textContent.match(/\n|\s+|\w+|[^\s\w]/g) || [];
-//       for (const word of words) {
-//         let text_type = 'punctuation';
-//         if (word === '\n') text_type = 'paragraph';
-//         else if (word.trim() === '') text_type = 'blank';
-//         else if (isWord(word)) text_type = 'word';
-
-//         blocks.push({
-//           index: idx,
-//           text: word,
-//           text_type,
-//           previous_index: idx === 0 ? null : idx - 1,
-//           next_index: null, // 等下再補
-//           style: parentStyle
-//         });
-//         idx++;
-//       }
-//     } else if (node.nodeType === Node.ELEMENT_NODE) {
-//       const style = node.style.cssText || parentStyle;
-//       node.childNodes.forEach(child => processNode(child, style));
-//     }
-//   }
-
-//   editor.childNodes.forEach(child => processNode(child));
-
-//   // 設定 next_index
-//   for (let i = 0; i < blocks.length; i++) {
-//     blocks[i].next_index = i === blocks.length - 1 ? null : i + 1;
-//   }
-
-//   return blocks;
-// });
-
-
+// 解析文章內容，拆成block(單字、標點符號、換行符號、空格等)
 const parseArticleText = computed(() => {
   const blocks = []
   let idx = 0
@@ -578,103 +489,6 @@ const parseArticleText = computed(() => {
 })
 
 
-// const parseArticleText = computed(() => {
-//   const blocks = [];
-//   let idx = 0;
-//   const editor = editorRef.value;
-//   if (!editor) return [];
-
-//   function processNode(node, parentStyle = '') {
-//     if (node.nodeType === Node.TEXT_NODE) {
-//       const words = node.textContent.match(/\n|\s+|\w+|[^\s\w]/g) || [];
-//       for (const word of words) {
-//         let text_type = 'punctuation';
-//         if (word === '\n') text_type = 'paragraph';
-//         else if (word.trim() === '') text_type = 'blank';
-//         else if (isWord(word)) text_type = 'word';
-
-//         blocks.push({
-//           index: idx,
-//           text: word,
-//           text_type,
-//           previous_index: idx === 0 ? null : idx - 1,
-//           next_index: null, // 稍後補
-//           style: parentStyle
-//         });
-//         idx++;
-//       }
-//     } else if (node.nodeType === Node.ELEMENT_NODE) {
-//       // 取得最終計算後的 style
-//       const computed = window.getComputedStyle(node);
-//       const currentStyle = `
-//         font-weight: ${computed.fontWeight};
-//         font-size: ${computed.fontSize};
-//         color: ${computed.color};
-//         font-style: ${computed.fontStyle};
-//         text-decoration: ${computed.textDecorationLine};
-//       `.replace(/\s+/g, ' ').trim(); // 清理多餘空白
-
-//       const style = parentStyle ? parentStyle + ';' + currentStyle : currentStyle;
-
-//       // 可以保留 tag 名稱，用於渲染 H1/H2
-//       const tag = node.tagName.toLowerCase();
-
-//       node.childNodes.forEach(child => processNode(child, style));
-//     }
-//   }
-
-//   editor.childNodes.forEach(child => processNode(child));
-
-//   // 設定 next_index
-//   for (let i = 0; i < blocks.length; i++) {
-//     blocks[i].next_index = i === blocks.length - 1 ? null : i + 1;
-//   }
-
-//   return blocks;
-// });
-
-// const parseArticleText = computed(() => {
-  
-//   const words = (editorRef.value?.innerText || '').match(/\s+|\w+|/g) || []
-
-//   return words.map((word, idx) => {
-//     const length = words.length
-
-//     // 空白字元
-//     if (word.trim() === '') {
-//       return {
-//         index: idx,
-//         text: word,
-//         text_type: 'blank',
-//         previous_index: idx === 0 ? null : idx - 1,
-//         next_index: idx === length - 1 ? null : idx + 1
-//       }
-//     }
-
-//     // 單字
-//     if (isWord(word)) {
-//       return {
-//         index: idx,
-//         text: word,
-//         text_type: 'word',
-//         previous_index: idx === 0 ? null : idx - 1,
-//         next_index: idx === length - 1 ? null : idx + 1
-//       }
-//     }
-
-//     // 標點或其他
-//     return {
-//       index: idx,
-//       text: word,
-//       text_type: 'punctuation',
-//       previous_index: idx === 0 ? null : idx - 1,
-//       next_index: idx === length - 1 ? null : idx + 1
-//     }
-//   })
-// })
-
-
-
 
 // // 判斷是不是字元(單一字元)
 function isTextChar(char) {
@@ -738,6 +552,7 @@ async function saveArticle() {
   }
 
   isEditing.value = false;
+  loadArticles();
 }
 
 ///////////////////////////////////////////////////////////////
@@ -747,82 +562,90 @@ async function saveArticle() {
 
 
 /////// 文字區塊鏈異動/span異動
+// 未來可能用到但暫時用不到，key住keyin處block
 
 //let wordChangeRecord = reactive([]);
 
-function wordchange(block, index){
-  //
-  alert('觸發');
-  // 1. 單字異動，先keep他的previous和next
-  // 2. 正則表達式重新解析整個單字
-  // 3. 判斷僅修改block text還是需要異動鏈 (解析轉換內容區塊length>1，多的區塊同樣要插入文字區塊鏈，確保各自的index、previous、next正確)
+// function wordchange(block, index){
+//   //
+//   alert('觸發');
+//   // 1. 單字異動，先keep他的previous和next
+//   // 2. 正則表達式重新解析整個單字
+//   // 3. 判斷僅修改block text還是需要異動鏈 (解析轉換內容區塊length>1，多的區塊同樣要插入文字區塊鏈，確保各自的index、previous、next正確)
 
-  //
-  // const pre_block = selectedArticle.blocks[block.previous_index]
-  // const next_block = selectedArticle.blocks[block.next_index]
+//   //
+//   // const pre_block = selectedArticle.blocks[block.previous_index]
+//   // const next_block = selectedArticle.blocks[block.next_index]
 
-  const preIdx = block.previous_index;
-  const nextIdx = block.next_index;
-  //
-  const words = (block.text || '').match(/\s+|\w+|/g) || [];
+//   const preIdx = block.previous_index;
+//   const nextIdx = block.next_index;
+//   //
+//   const words = (block.text || '').match(/\s+|\w+|/g) || [];
 
-  const new_words_block = words.map((word, idx) => {
+//   const new_words_block = words.map((word, idx) => {
 
-    let item = {
-      index: 0,
-      text_type: 'punctuation',
-      text: word,
-      previous_index: 0,
-      next_index: 0
-    }
+//     let item = {
+//       index: 0,
+//       text_type: 'punctuation',
+//       text: word,
+//       previous_index: 0,
+//       next_index: 0
+//     }
 
-    // 空白字元
-    if (word.trim() === '') {
-      item.text_type = 'blank'
-      return item
-    }
+//     // 空白字元
+//     if (word.trim() === '') {
+//       item.text_type = 'blank'
+//       return item
+//     }
 
-    // 單字
-    if (isWord(word)) {
-      item.text_type = 'word'
-    }
+//     // 單字
+//     if (isWord(word)) {
+//       item.text_type = 'word'
+//     }
 
-    // 標點或其他
-    return item
-  })
+//     // 標點或其他
+//     return item
+//   })
  
 
 
-  new_words_block.forEach((item, i) => {
+//   new_words_block.forEach((item, i) => {
 
 
-        // 第一個單字寫在原本的位置
-    if (i === 0){
+//         // 第一個單字寫在原本的位置
+//     if (i === 0){
 
-      item.index = index; //索引為本來的索引
-      item.previous_index = preIdx
+//       item.index = index; //索引為本來的索引
+//       item.previous_index = preIdx
 
-      item.next_index = new_words_block.length ===1 ? nextIdx : selectedArticle.value.blocks.length
+//       item.next_index = new_words_block.length ===1 ? nextIdx : selectedArticle.value.blocks.length
 
-      selectedArticle.value.blocks[index] = item;
-      return 
-    }
+//       selectedArticle.value.blocks[index] = item;
+//       return 
+//     }
 
-    item.index = selectedArticle.value.block.length;
-    item.previous_index = new_words_block[i-1].index;
-    item.next_index = i === new_words_block.length-1 ? nextIdx :selectedArticle.value.blocks.length+1
-    selectedArticle.value.blocks.push(item);
-    //
-  });
-
-
-}
+//     item.index = selectedArticle.value.block.length;
+//     item.previous_index = new_words_block[i-1].index;
+//     item.next_index = i === new_words_block.length-1 ? nextIdx :selectedArticle.value.blocks.length+1
+//     selectedArticle.value.blocks.push(item);
+//     //
+//   });
 
 
+// }
 
+
+
+
+//// 筆記內容偵測輸入與自動儲存 ///
+
+// 計時器
 const saveTimer = ref(null)
+
+// 狀態文字
 const status = ref('')
 
+// 事件捕獲
 function onNoteInput() {
   // 使用者輸入時，重設計時器
   console.log("note input");
@@ -837,19 +660,11 @@ function onNoteInput() {
 }
 
 
-
+// 發送筆記資料到後端
 async function saveNoteToServer(note) {
   status.value = '💾 儲存中...'
   console.log('savetoserver')
   try {
-    // const res = await fetch('/article', {
-    //   method: 'PATCH',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     article_id: articleId,
-    //     note: note,
-    //   }),
-    // })
 
     const body = {
       article_id : selectedArticle.value.id,
@@ -858,7 +673,6 @@ async function saveNoteToServer(note) {
 
     const res = await api.patch('/article/note',body)
 
-    // const data = await res.json()
     console.log('✅ 已自動儲存:', res.data)
     status.value = '✅ 已儲存'
   } catch (err) {
@@ -871,13 +685,6 @@ async function saveNoteToServer(note) {
 }
 
 
-// function onBlur(event) {
-//   if (articleTitle.value.trim() === '') {
-//     articleTitle.value = '暫無標題'
-//     event.target.innerText = articleTitle.value
-//   }
-//   console.log('blur 觸發', articleTitle.value)
-// }
 
 
 
@@ -915,15 +722,18 @@ async function AddMarkedWord(){
 // 滑鼠點擊標記單字
 async function markWord(block) {
 
+
+  // 只標記單字，標點符號、空白、其他字元等忽略
   if (block.text_type != 'word') return
  
+  // 偵測當前marked狀態，判斷此次是要mark還是取消mark
   let mark = !block.marked;
 
   block.marked = mark;  // true → false, false → true
 
 
+  // 異動文章右側標記單字列表，將單字加入列表中/或從列表中移除
   if (mark){
-    //
     selectedArticle.value.marked_words.push({'word':block.text});
   }else{
     const idx = selectedArticle.value.marked_words.findIndex(w => w.word === block.text);
@@ -934,15 +744,14 @@ async function markWord(block) {
 
 
 
-  // 修改block的marked狀態
+  // 呼叫API異動Block的marked狀態 // (文章中的每個單字blocks以marked屬性確認該單字是否有被標記)
+
   let body = {
     "marked": mark 
   }
-
   let response
 
   try{
-    
     response = await api.patch(`/article-blocks/${block.id}/marked`, body);
     console.log('異動block marked標記', response?.data)
   
@@ -952,8 +761,7 @@ async function markWord(block) {
   }
 
 
-  // 新增markedword資料
-
+  // 新增或刪除markedword表的標記資料 // (marked的單字會被加入makred words表，紀錄標記來源文章、單字內容等)
   if (mark){
     //
     body = {
@@ -989,10 +797,6 @@ async function markWord(block) {
       alert('maredword刪除失敗')
     }
   }
-
-  
-
-
 }
 
 
@@ -1324,6 +1128,7 @@ watch(selectedArticle.value, (newItem) => {
   flex-direction: column; /* 垂直排列 input-bar 與列表 */
   padding: 10px;
   border-radius: 15px;
+
 }
 
 
@@ -1372,11 +1177,8 @@ watch(selectedArticle.value, (newItem) => {
 
 .input-bar{
   position: absolute;
-  display: flex;
   gap: 8px; /* input 與 button 間距 */
   margin-bottom: 8px; /* 與下面 ul 保持距離 */
-
-
 
 }
 
@@ -1425,6 +1227,71 @@ watch(selectedArticle.value, (newItem) => {
   cursor: pointer;       
 }
 
+
+.translation-bar {
+  display: flex;
+  align-items: center; /*文字垂直置中*/
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.translation-bar:hover{
+  background-color: #e0e0e0;
+  cursor: pointer;
+}
+
+.translation-bar img{
+  margin-right: 10px;
+}
+
+.checkmark {
+  margin-left: 15px;
+  color: green;
+  font-size: 20px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  padding: 20px;
+}
+
+.spinner {
+  width: 80px;
+  height: 80px;
+
+  /* 底色：更深的灰，在白背景上更明顯 */
+  border: 6px solid #d6d6d6;
+
+  /* 旋轉那一條：深色，提高對比 */
+  border-top: 6px solid #2c3e50;
+
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  /* 加個淡淡陰影，加強白底上的層次感 */
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 14px;
+  font-size: 20px;
+
+  /* 在白背景上清晰可見 */
+  color: #2c3e50;
+  font-weight: 600;
+
+  font-family: "Segoe UI", Arial, sans-serif;
+}
 
 
 </style>

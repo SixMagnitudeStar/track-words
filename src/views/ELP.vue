@@ -41,8 +41,9 @@
               <div>
                 <input v-model="vocab" type="text" placeholder="Enter a word & phrase"  @keyup.enter="appendVocab(vocab)"/>
                 &nbsp;
-                <button @click="speak(vocab)">🔊 listening</button>&nbsp;
-                <button @click="appendVocab(vocab)">Add to vocabList</button>
+                <button @click="appendVocab(vocab)">Add to vocabList</button>&nbsp;
+                <button @click="speak(vocab)">🔊 listening</button>
+                
               </div>
 
         </div> 
@@ -59,10 +60,13 @@
             <ul>
               <li v-for="(vocab, index) in vocabList" :key="index">{{vocab}}
                 <div class="tooltip">
+                  <span @click="speak(vocab)" title="listening vocab">🔊</span>
+                  <span class="tooltiptext">listening vocab</span>
+                </div>
+                <div class="tooltip">
                   <img class="bin" src="@/assets/bin.png" @click="removeVocab(index)" alt="delete" >
                   <span class="tooltiptext">Delete vocab</span>
                 </div>
-              
               </li>
             </ul>
           </div>
@@ -338,5 +342,8 @@ ul{
   text-align: left;
 
 }
+
+
+
 
 </style>
