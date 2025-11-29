@@ -1,4 +1,3 @@
-
 <template>
 
   <!-- ELP 頁面：聽力練習與管理界面 -->
@@ -44,7 +43,7 @@
               <div>
                 <input v-model="vocab" type="text" placeholder="Enter a word & phrase"  @keyup.enter="appendVocab(vocab)"/>
                 &nbsp;
-                <button @click="appendVocab(vocab)">Add to vocabList</button>&nbsp;
+                <button @click="appendVocab(vocab)">Add</button>&nbsp;
                 <button @click="speak(vocab)">🔊 listening</button>
                 
               </div>
@@ -67,44 +66,53 @@
         <div class="vocab-lists-container">
           <!-- 單一清單卡片：每個卡片包含 list.name、list.words，以及每清單專屬的控制項 -->
           <div v-for="(list, idx) in visibleVocabLists" :key="list.id" class="vocab-list-card">
-              <div class="vocab-list-header">
-                <div style="display:flex; gap:8px; align-items:center;">
-                  <div v-if="list.editing">
-                    <input :ref="'listName-' + list.id" v-model="list.nameDraft" type="text" class="list-name-input" title="請輸入列表名稱"  />
-                  </div>
-                  <div v-else>
-                    <h3 style="margin:0">{{ list.name }}</h3>
-                  </div>
-                  <button @click="toggleEditListName(list)" class="list-name-toggle">
-                    <span v-if="list.editing">💾</span>
-                    <span v-else>✏️</span>
-                  </button>
+            <div class="vocab-list-header">
+              <div style="display:flex; gap:8px; align-items:center;">
+                <div v-if="list.editing">
+                  <input :ref="'listName-' + list.id" v-model="list.nameDraft" type="text" class="list-name-input" title="請輸入列表名稱"  />
                 </div>
+                <div v-else>
+                  <h3 style="margin:0">{{ list.name }}</h3>
+                </div>
+                <button @click="toggleEditListName(list)" class="list-name-toggle">
+                  <span v-if="list.editing">💾</span>
+                  <span v-else>✏️</span>
+                </button>
               </div>
-            <!-- 每清單控制項：匯入標記單字、或 OR、單字輸入、加入按鈕，以及播放按鈕 -->
-            <div class="header-controls vocab-list-controls">
-              
-              <!-- <span>
-                <img  class="or-icon" src="@/assets/or-arrows.png" title="將標記單字載入聆聽列表 OR 手動添加單字到列表"  alt="OR" />
-              </span> -->
+              <!-- 聆聽模式切換按鈕 -->
+              <button 
+                @click="toggleListeningMode(list)" 
+                :class="{ active: list.listeningMode }"
+                class="mode-toggle-btn"
+                :title="list.listeningMode ? '退出聆聽模式' : '進入聆聽模式'"
+              >
+                {{ list.listeningMode ? '🔊 聆聽中' : '✏️ 編輯' }}
+              </button>
+            </div>
+
+            <!-- 編輯模式：顯示輸入框與標記單字載入 -->
+            <div v-if="!list.listeningMode" class="header-controls vocab-list-controls">
               <div class="header-input list-input-area">
-                <input :ref="'listInput-' + list.id" v-model="list.input" type="text" placeholder="Enter a word & phrase"  @keyup.enter="appendVocabToList(list)"/>
-                &nbsp;
-                <button @click="appendVocabToList(list)">Add</button>&nbsp;
-                <button @click="speak(list.input)">🔊 listening</button>
+                <input :ref="'listInput-' + list.id" v-model="list.input" type="text" placeholder="Enter a word & phrase" @keyup.enter="appendVocabToList(list)"/>
               </div>
+              <button @click="appendVocabToList(list)">Add</button>
+              <button @click="speak(list.input)" title="listening">🔊</button>
               <div class="tooltip" @click="loadMarkedWordsToList(list)">
                 <div class="parallel-div">
                   <img src="@/assets/sticky-note.png" alt="">
-                  <img class="arrow-down icon" src="@/assets/forward.png"  alt="將標記單字載入聆聽列表" >
+                  <img class="arrow-down icon" src="@/assets/forward.png" alt="將標記單字載入聆聽列表">
                 </div>
                 <span class="tooltiptext">將標記單字載入此詞彙列表</span>
               </div>
             </div>
-            <!-- 當未展開且總數大於 MAX_VISIBLE 時，在這三個中第三個卡片旁顯示浮動展開按鈕 -->
-            <div v-if="!showAllLists && vocabLists.length > 3 && idx === visibleVocabLists.length - 1" class="floating-expand-btn">
-              <button class="expand-toggle-btn" @click="toggleShowAllLists" title="展開全部列表">>> 展開</button>
+
+            <!-- 聆聽模式：只顯示隨機撥放與刷新 -->
+            <div v-else class="listening-mode-controls">
+              <button @click="randomListeningFromList(list)" class="primary-btn">🎲🔊 隨機撥放</button>
+              <button @click="refreshListeningMode(list)" class="secondary-btn">🔄 恢復列表</button>
             </div>
+
+            <!-- ...existing vocab list body... -->
             <div class="vocab-list-body">
               <ul>
                 <li v-for="(w, idx) in list.words" :key="idx">{{ w }}
@@ -237,7 +245,17 @@
       // 新增的 list 會包含自己的 words 陣列與 per-list 的 input 欄位
       addVocabList(){
         const id = this.nextVocabListId++;
-        const list = { id, name: `List ${id}`, words: [], input: '', editing: true, nameDraft: `List ${id}` };
+        const list = { 
+          id, 
+          name: `List ${id}`, 
+          words: [], 
+          input: '', 
+          editing: true, 
+          nameDraft: `List ${id}`,
+          listeningMode: false,        // 新增：聆聽模式標誌
+          listeningWords: [],          // 新增：聆聽時的副本
+          currentListeningWord: ''     // 新增：目前播放的單字
+        };
         // 將新建的 list 插入陣列前端（unshift）以保持「最新的在最前面」排序
         this.vocabLists.unshift(list);
         this.activeVocabListId = id;
@@ -279,6 +297,37 @@
       },
       reListening(){
         doReListening(this);
+      },
+
+      // 切換聆聽模式
+      toggleListeningMode(list) {
+        if (!list.listeningMode && list.words.length === 0) {
+          alert('列表為空，請先新增單字');
+          return;
+        }
+        list.listeningMode = !list.listeningMode;
+        if (list.listeningMode) {
+          // 進入聆聽模式時，複製詞彙列表
+          list.listeningWords = [...list.words];
+        }
+      },
+
+      // 從指定清單隨機撥放單字
+      randomListeningFromList(list) {
+        if (list.listeningWords.length === 0) {
+          alert('聆聽列表已空');
+          return;
+        }
+        const randomIndex = Math.floor(Math.random() * list.listeningWords.length);
+        list.currentListeningWord = list.listeningWords[randomIndex];
+        this.speak(list.currentListeningWord);
+        list.listeningWords.splice(randomIndex, 1);
+      },
+
+      // 刷新聆聽模式下的單字列表
+      refreshListeningMode(list) {
+        list.listeningWords = [...list.words];
+        list.currentListeningWord = '';
       },
 
       // 依據索引刪除詞彙列表與聆聽列表中的單字
@@ -402,6 +451,7 @@ input[type="text"] {
   margin-bottom: 10px;
   border: 1px solid #ccc;
   border-radius: 5px;
+  width: 130px;
 }
 
 button {
@@ -413,21 +463,19 @@ button {
   cursor: pointer;
 }
 
-.refresh_icon{
+.refresh_icon {
   height: 25px;
   width: 25px;
   cursor: pointer;
 }
 
-
-
-li{
+li {
   height: 30px;
   display: flex;
-  align-items: center;  /* 垂直置中 */
+  align-items: center;
 }
 
-ul{
+ul {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -441,45 +489,36 @@ ul{
   margin-top: 5vw;
 }
 
-.bin{
+.bin {
   height: 20px;
   width: 20px;
   cursor: pointer;
   vertical-align: middle;
 }
 
-#ListDiv{
+#ListDiv {
   display: flex;
-  /* align-items: center;  垂直置中 */
-  align-items: flex-start; /* 讓兩個子div都靠上對齊 */
-  gap: 20px;               /* 保持間距，可依需要調整 */
+  align-items: flex-start;
+  gap: 20px;
 }
 
-.or-icon{
+.or-icon {
   margin: 10px 20px;
-  /* height: 30px;
-  width: 40px; */
   height: 20px;
   width: 30px;
   display: block;
   cursor: pointer;
 }
 
-
 .tooltip {
   position: relative;
   display: inline-block;
-
-
-
 }
 
-.tooltip img{
+.tooltip img {
   height: 25px;
   width: 25px;
 }
-
-
 
 .tooltip .tooltiptext {
   visibility: hidden;
@@ -490,7 +529,7 @@ ul{
   border-radius: 4px;
   position: absolute;
   z-index: 1;
-  bottom: 100%; /* 顯示在上方 */
+  bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
@@ -503,47 +542,100 @@ ul{
   opacity: 1;
 }
 
-
 .arrow-down {
   transform: rotate(90deg);
-  /* height: 25px;
-  width: 25px; */
   height: 15px;
   width: 15px;
   cursor: pointer;
-  /* margin-top: 7px;
-  margin-left: 5px; */
 }
 
-.vocab-lists-container{ margin-top:12px; display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px }
-.vocab-list-card{ border: 2px solid #cddbf7; padding: 8px; border-radius: 8px; background: #fff; position: relative }
-.vocab-list-header{ display:flex; align-items:center; justify-content:space-between }
-.vocab-list-controls{ display:flex; gap:8px; align-items:center; margin-top:8px }
-.list-input-area{ display:flex; gap:0px; align-items:center }
-.vocab-list-body ul{ list-style:none; padding:0; margin:0; }
-.vocab-list-body li{ display:flex; gap:8px; align-items:center; height:28px }
-.vocab-list-card{ border:2px solid #8fa8ff; }
-.vocab-list-card .list-name-input{ padding:6px; font-weight:600; }
-.list-name-toggle{ background:transparent; border:none; margin-left:8px; cursor:pointer; }
+.vocab-lists-container {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
 
-.list-title-div{
+.vocab-list-header {
   display: flex;
-  align-items: center;   /* 垂直置中 */
+  align-items: center;
+  justify-content: space-between;
 }
 
-.listening-div{
-  text-align: left;
-
+.vocab-list-card {
+  border: 2px solid #cddbf7;
+  padding: 8px;
+  border-radius: 8px;
+  background: #fff;
+  position: relative;
 }
 
-.list-actions-row{ display:flex; justify-content:space-between; align-items:center; }
-.list-expand-container{ display:flex; gap:8px; align-items:center }
-.expand-toggle-btn{ background:transparent; border:1px solid #8fa8ff; padding:6px 10px; border-radius:6px; cursor:pointer }
-.show-count{ color:#666; font-size: 0.9em }
-.floating-expand-btn{ position:absolute; right:-34px; top:8px; z-index:5 }
-.floating-expand-btn .expand-toggle-btn{ padding: 6px 8px; }
+.vocab-list-body li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  height: 28px;
+}
 
+.vocab-list-body ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
 
+.list-name-input {
+  padding: 6px;
+  font-weight: 600;
+}
 
+.list-name-toggle {
+  background: transparent;
+  border: none;
+  margin-left: 8px;
+  cursor: pointer;
+}
+
+.list-input-area {
+  display: flex;
+  gap: 0px;
+  align-items: center;
+}
+
+.vocab-list-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.mode-toggle-btn {
+  background: #ff9800;
+  padding: 6px 12px;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.mode-toggle-btn.active {
+  background: #ff5722;
+}
+
+.listening-mode-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.listening-mode-controls button {
+  flex: 1;
+  padding: 10px;
+}
+
+.primary-btn {
+  background-color: #2196F3;
+}
+
+.secondary-btn {
+  background-color: #4CAF50;
+}
 
 </style>
