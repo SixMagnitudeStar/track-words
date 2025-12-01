@@ -14,7 +14,7 @@
 
         <!-- 全域詞彙清單控制區：保留舊版（single list）功能與匯入/播放控制 -->
         <div class="list-title-div">
-            <h2>詞彙列表&nbsp;</h2>
+            <!-- <h2>詞彙列表&nbsp;</h2>
             <div class="tooltip" >
               <span @click="randomListening">🎲🔊</span>
               <span class="tooltiptext">隨機從列表中撥放單字聆聽</span>
@@ -33,9 +33,9 @@
                 </div>
                 
                 <span class="tooltiptext">將標記單字載入聆聽列表</span>
-              </div>
+              </div> -->
               <!-- <sapn>將標記單字載入聆聽列表/手動添加單字到列表</sapn> -->
-              <span>
+              <!-- <span>
                 
                     <img  class="or-icon" src="@/assets/or-arrows.png" title="將標記單字載入聆聽列表 OR 手動添加單字到列表"  alt="OR" />
               
@@ -46,20 +46,32 @@
                 <button @click="appendVocab(vocab)">Add</button>&nbsp;
                 <button @click="speak(vocab)">🔊 listening</button>
                 
-              </div>
+              </div> -->
 
         </div> 
 
         <!-- 新功能：建立並顯示多個詞彙清單 -->
         <!-- 新增詞彙列表按鈕：點擊新增一個獨立的詞彙清單（每個清單有自己的單字陣列） -->
-        <div class="list-actions-row" style="margin: 16px 0;">
+        <div class="parallel-div">
           <div>
             <button @click="addVocabList">新增詞彙列表</button>
           </div>
           <!-- 展開後提供收合按鈕於標題列，方便收回 -->
-          <div v-if="showAllLists && vocabLists.length > 3">
+          <!-- <div v-if="showAllLists && vocabLists.length > 3">
             <button class="expand-toggle-btn" @click="toggleShowAllLists"><< 收合</button>
-          </div>
+          </div> -->
+           <!-- 收合按鈕：僅在已展開時出現 -->
+
+            <!-- 展開全部按鈕：僅在未展開且清單大於3個時出現 -->
+            <div v-if="!showAllLists && vocabLists.length > 3">
+              <button  @click="toggleShowAllLists">展開全部 >></button>
+            </div>
+
+            <!-- 收合按鈕：僅在已展開時出現 -->
+            <div v-else>
+              <button @click="toggleShowAllLists"><< 收合</button>
+            </div>
+                
         </div>
 
         <!-- 多清單區：每個清單是一個卡片（vocab-list-card），包含名稱、匯入與輸入/新增欄位，以及單字清單顯示 -->
@@ -85,7 +97,7 @@
                     <span>✏️</span>
                     <span class="tooltiptext">編輯列表名稱</span>
                   </div>
-                </div>
+                </div>|
               </div>
               <!-- 聆聽模式切換按鈕 -->
                <div v-if="list.listeningMode" 
@@ -152,6 +164,10 @@
                     <span @click="speak(w)" title="listening vocab">🔊</span>
                     <span class="tooltiptext">listening vocab</span>
                   </div>
+                  <div class="tooltip">
+                      <img class="bin" src="@/assets/bin.png" @click="removeVocab(list, idx)" alt="delete" >
+                      <span class="tooltiptext">Delete vocab</span>
+                    </div>
                 </li>
               </ul>
             </div>
@@ -164,6 +180,7 @@
                       <span @click="speak(w)" title="listening vocab">🔊</span>
                       <span class="tooltiptext">listening vocab</span>
                     </div>
+          
                   </li>
                 </ul>
               </div>
@@ -194,7 +211,7 @@
         
         </div> -->
 
-        <div id="ListDiv">
+        <!-- <div id="ListDiv">
           <div>
             <ul>
               <li v-for="(vocab, index) in vocabList" :key="index">{{vocab}}
@@ -210,23 +227,23 @@
             </ul>
           </div>
           <div>
-            <!-- <h2>聆聽列表
+            <h2>聆聽列表
               <span>🎲🔊</span>
               <img @click="refreshListeningList" class="refresh_icon" alt="Refresh" src="@/assets/rotate.png" title="refresh listeningList"> 
               ：<button @click="randomListening"> random listening</button> &nbsp;
               <button @click="reListening">🔊 listening again</button><span>{{listeningVocab }}</span> &nbsp;
-            </h2> -->
+            </h2>
             <ul>
               <li v-for="(vocab, index) in listeningList" :key="index">{{vocab}}</li>
             </ul>
           </div>
-        </div>
-        <hr>
-        <h2>隨機聆聽測驗</h2>
+        </div> -->
+        <!-- <hr>
+        <h2>隨機聆聽測驗</h2> -->
     </div>
-    <div v-else>
+    <!-- <div v-else>
       <h3>測試</h3>
-    </div>
+    </div> -->
   </div>
  
   </template>
@@ -402,25 +419,27 @@
       // 依據索引刪除詞彙列表與聆聽列表中的單字
       // 從舊有的 `vocabList` 刪除單字，同時使用 swap-and-pop 技巧從 `listeningList` 中移除對應單字，
       // 以避免 O(n) 的陣列內部 splice 重排成本。
-      removeVocab(vocabIndex){
+      removeVocab(list,vocabIndex){
         // 取得要移除的單字
-        const word = this.vocabList[vocabIndex];
+        //const word = this.vocabList[vocabIndex];
+        // const word = this.listeningWords[vocabIndex];
 
         // 找尋找該單字是否存在於聆聽列表中，若存在的話取得找到的第一個索引 (若匹配多個也僅刪除一個)
-        const index = this.listeningList.indexOf(word);
+        // const index = this.listeningList.indexOf(word);
+        // const index = this.playedWords.indexOf(word);
 
-        if (index !== -1) {
-          // 取得陣列最後一個索引與元素
-          const lastIndex = this.listeningList.length - 1;
-          const lastWord = this.listeningList[lastIndex];
+        // if (index !== -1) {
+        //   // 取得陣列最後一個索引與元素
+        //   const lastIndex = this.playedWords.length - 1;
+        //   const lastWord = this.playedWords[lastIndex];
 
-          // 將目標元素與最後一個元素交換位置，然後用 pop 移除最後一個 (swap-and-pop(陣列中移除元素，順序若不重要可用的技巧)
-          this.listeningList[index] = lastWord;
-          this.listeningList.pop();
-        }
+        //   // 將目標元素與最後一個元素交換位置，然後用 pop 移除最後一個 (swap-and-pop(陣列中移除元素，順序若不重要可用的技巧)
+        //   this.playedWords[index] = lastWord;
+        //   this.playedWords.pop();
+        // }
 
         // 將單字從詞彙列表中移除
-        this.vocabList.splice(vocabIndex, 1);
+        list.words.splice(vocabIndex, 1);
       },
       loadMarkedWords(){
         doloadMarkedWords(this)
@@ -559,8 +578,8 @@ ul {
 }
 
 .bin {
-  height: 20px;
-  width: 20px;
+  height: 15px;
+  width: 15px;
   cursor: pointer;
   vertical-align: middle;
 }
@@ -587,6 +606,10 @@ ul {
 .tooltip img {
   height: 25px;
   width: 25px;
+}
+.tooltip img.bin{
+  height: 15px;
+  width: 15px;
 }
 
 .tooltip .tooltiptext {
@@ -621,7 +644,8 @@ ul {
 .vocab-lists-container {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
+  /* grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); */
   gap: 10px;
 }
 
@@ -689,10 +713,18 @@ ul {
 
 .vocab-list-controls {
   display: flex;
-  gap: 8px;
+  /* gap: 8px; */
   align-items: center;
-  margin-top: 8px;
+  padding: auto auto;
+  /* margin-top: 8px; */
 }
+
+.vocab-list-controls input[type="text"] {
+  display: block;
+  /* width: auto; */
+  margin: 0 ;
+}
+
 
 .mode-toggle-btn {
   background: #ff9800;
