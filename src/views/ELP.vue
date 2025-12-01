@@ -68,35 +68,56 @@
           <div v-for="(list, idx) in visibleVocabLists" :key="list.id" class="vocab-list-card">
             <div class="vocab-list-header">
               <div style="display:flex; gap:8px; align-items:center;">
-                <div v-if="list.editing">
-                  <input :ref="'listName-' + list.id" v-model="list.nameDraft" type="text" class="list-name-input" title="請輸入列表名稱"  />
+                <div class="list-name-wrapper">
+                  <div  v-if="list.editing">
+                    <input :ref="'listName-' + list.id" v-model="list.nameDraft" type="text" class="" title="請輸入列表名稱"  />
+                  </div>
+                  <div v-else>
+                    <h3 style="margin:0">{{ list.name }}</h3>
+                  </div>
                 </div>
-                <div v-else>
-                  <h3 style="margin:0">{{ list.name }}</h3>
+                <div @click="toggleEditListName(list)" class="list-name-toggle">
+                  <div  v-if="list.editing" class="tooltip">  
+                      <img  src="@/assets/check.png"  alt="儲存列表名稱" >
+                      <span class="tooltiptext">儲存列表名稱</span>
+                  </div>
+                  <div  v-else class="tooltip" >
+                    <span>✏️</span>
+                    <span class="tooltiptext">編輯列表名稱</span>
+                  </div>
                 </div>
-                <button @click="toggleEditListName(list)" class="list-name-toggle">
-                  <span v-if="list.editing">💾</span>
-                  <span v-else>✏️</span>
-                </button>
               </div>
               <!-- 聆聽模式切換按鈕 -->
-              <button 
+               <div v-if="list.listeningMode" 
+           
                 @click="toggleListeningMode(list)" 
                 :class="{ active: list.listeningMode }"
                 class="mode-toggle-btn"
                 :title="list.listeningMode ? '退出聆聽模式' : '進入聆聽模式'"
               >
-                {{ list.listeningMode ? '🔊 聆聽中' : '✏️ 編輯' }}
-              </button>
+              🔊 聆聽中
+                <!-- {{ list.listeningMode ? '🔊 聆聽中' : '✏️ 編輯545' }} -->
+           
+              </div>
+              <div v-else class="tooltip" @click="toggleListeningMode(list)">
+                <div class="parallel-div">
+                
+                  <img class="arrow-down icon" src="@/assets/forward.png"  alt="進入聆聽模式" >
+                  🎲🔊 
+                </div>
+                
+                <span class="tooltiptext">進入聆聽模式</span>
+              </div>
             </div>
 
             <!-- 編輯模式：顯示輸入框與標記單字載入 -->
             <div v-if="!list.listeningMode" class="header-controls vocab-list-controls">
-              <div class="header-input list-input-area">
+              <!-- <div class="header-input list-input-area"> -->
                 <input :ref="'listInput-' + list.id" v-model="list.input" type="text" placeholder="Enter a word & phrase" @keyup.enter="appendVocabToList(list)"/>
-              </div>
+              <!-- </div> -->
               <button @click="appendVocabToList(list)">Add</button>
-              <button @click="speak(list.input)" title="listening">🔊</button>
+              <!-- <span @click="speak(list.input)" title="listening">🔊</span> -->
+              <!-- <button @click="speak(list.input)" title="listening">🔊</button> -->
               <div class="tooltip" @click="loadMarkedWordsToList(list)">
                 <div class="parallel-div">
                   <img src="@/assets/sticky-note.png" alt="">
@@ -104,16 +125,27 @@
                 </div>
                 <span class="tooltiptext">將標記單字載入此詞彙列表</span>
               </div>
+
+
             </div>
 
             <!-- 聆聽模式：只顯示隨機撥放與刷新 -->
             <div v-else class="listening-mode-controls">
-              <button @click="randomListeningFromList(list)" class="primary-btn">🎲🔊 隨機撥放</button>
-              <button @click="refreshListeningMode(list)" class="secondary-btn">🔄 恢復列表</button>
+              <div class="tooltip" >
+                <span @click="randomListeningFromList(list)">🎲🔊</span>
+                <span class="tooltiptext">隨機從列表中撥放單字聆聽</span>
+              </div>
+              <!-- <button @click="randomListeningFromList(list)" class="primary-btn">🎲🔊 隨機撥放</button> -->
+              <div class="tooltip" >
+                <img @click="refreshListeningMode(list)" class="refresh_icon" alt="Refresh list" src="@/assets/rotate.png">
+                <span class="tooltiptext">刷新列表</span>
+              </div>
+              <!-- <button @click="refreshListeningMode(list)" class="secondary-btn">🔄 恢復列表</button> -->
             </div>
 
             <!-- ...existing vocab list body... -->
-            <div class="vocab-list-body">
+             
+            <div  v-if="!list.listeningMode" class="vocab-list-body">
               <ul>
                 <li v-for="(w, idx) in list.words" :key="idx">{{ w }}
                   <div class="tooltip">
@@ -123,6 +155,35 @@
                 </li>
               </ul>
             </div>
+
+            <div v-else class="parallel-div">
+              <div class="vocab-list">
+                <ul>
+                  <li v-for="(w, idx) in list.listeningWords" :key="idx">{{ w }}
+                    <div class="tooltip">
+                      <span @click="speak(w)" title="listening vocab">🔊</span>
+                      <span class="tooltiptext">listening vocab</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="vocab-list">
+                <ul>
+                  <li v-for="(w, idx) in list.playedWords" :key="idx">{{ w }}
+                    <div class="tooltip">
+                      <span @click="speak(w)" title="listening vocab">🔊</span>
+                      <span class="tooltiptext">listening vocab</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+
+
+
+            </div>
+
           </div>
         </div>
         <!-- <div class="listening-div">
@@ -182,6 +243,7 @@
         vocab: '',
         // 舊有 / 全域 vocab 清單（簡單的字串陣列）
         vocabList: [],
+        playedList:[],
         listeningList: [],
         // 目前正在播放或選中的聽力單字
         listeningVocab: ''
@@ -249,6 +311,7 @@
           id, 
           name: `List ${id}`, 
           words: [], 
+          playedWords: [],
           input: '', 
           editing: true, 
           nameDraft: `List ${id}`,
@@ -322,12 +385,18 @@
         list.currentListeningWord = list.listeningWords[randomIndex];
         this.speak(list.currentListeningWord);
         list.listeningWords.splice(randomIndex, 1);
+        alert(JSON.stringify(list.listeningWords));
+        // 將當前撥放的單字加入已撥放清單中
+        list.playedWords.push(list.currentListeningWord);
+
       },
 
       // 刷新聆聽模式下的單字列表
       refreshListeningMode(list) {
         list.listeningWords = [...list.words];
         list.currentListeningWord = '';
+
+        list.playedWords = [];
       },
 
       // 依據索引刪除詞彙列表與聆聽列表中的單字
@@ -583,17 +652,34 @@ ul {
   margin: 0;
 }
 
-.list-name-input {
-  padding: 6px;
-  font-weight: 600;
+.vocab-list{
+  display:block;
+  width: 140px;
+}
+
+
+.list-name-wrapper{
+  display: flex;
+  align-items: center;
+  padding-top: 10px;
+}
+
+
+.list-name-wrapper h3 {
+  margin: 0;
+  line-height: 28px;  /* 對齊 input */
 }
 
 .list-name-toggle {
-  background: transparent;
-  border: none;
-  margin-left: 8px;
-  cursor: pointer;
+  display: flex;
+  align-items: center;
 }
+
+.list-name-toggle{
+  display: flex;
+  align-items: center;
+}
+
 
 .list-input-area {
   display: flex;
@@ -638,4 +724,8 @@ ul {
   background-color: #4CAF50;
 }
 
+
+.as{
+  padding-top: 15px;
+}
 </style>
