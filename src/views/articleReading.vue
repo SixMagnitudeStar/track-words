@@ -543,8 +543,21 @@ async function saveArticle() {
     }
 
     alert('文章新增成功!')
+  
+    let res = response.data;
+    const resArticle = response.data.article;
+    console.log('新增成功', res)
+    selectedArticle.value = resArticle;
+
+    selectedArticle.value = resArticle;
+
+    //selectedArticle.value = resArticle;
+
+    // 同步更新 articles 列表
+    articles[selectedIndex.value] = { ...resArticle };
+
     selectArticle(0)
-    console.log('新增成功', response.data)
+
   } catch(err){
     console.error('422 details:', err.response?.data?.detail)
     console.error(err)
@@ -552,7 +565,7 @@ async function saveArticle() {
   }
 
   isEditing.value = false;
-  loadArticles();
+  // loadArticles();
 }
 
 ///////////////////////////////////////////////////////////////
@@ -723,6 +736,8 @@ async function AddMarkedWord(){
 async function markWord(block) {
 
 
+  alert(JSON.stringify(block));
+
   // 只標記單字，標點符號、空白、其他字元等忽略
   if (block.text_type != 'word') return
  
@@ -731,7 +746,7 @@ async function markWord(block) {
 
   block.marked = mark;  // true → false, false → true
 
-
+  alert('到此');
   // 異動文章右側標記單字列表，將單字加入列表中/或從列表中移除
   if (mark){
     selectedArticle.value.marked_words.push({'word':block.text});
@@ -763,11 +778,13 @@ async function markWord(block) {
 
   // 新增或刪除markedword表的標記資料 // (marked的單字會被加入makred words表，紀錄標記來源文章、單字內容等)
   if (mark){
+    alert('marked')
     //
     body = {
       "article_id" : selectedArticle.value.id,
       "word": block.text 
     }
+    alert('body:'+body);
 
     console.log('要送出的 markedword body:', body);
 
@@ -782,7 +799,7 @@ async function markWord(block) {
       console.error(err)
     }
   }else{
-
+    alert('cancel marked')
     try {
       const response = await api.delete(`/markedword`, {
         params: {
@@ -809,11 +826,16 @@ function selectArticle(index){
   selectedIndex.value = index;
   //selectedArticle.value = articles[index];
   Object.assign(selectedArticle.value,articles[index]);
+  //selectedArticle.value = { ...articles[index] }; // ✅ 直接替換引用
+
 
   //alert('檢查block: '+JSON.stringify(selectedArticle.value.blocks));
 
   // alert('id:'+selectedArticle.value.id+' 標題:'+selectedArticle.value.title);
-  // alert(JSON.stringify(selectedArticle.value))
+  alert('index:'+index);
+  alert(JSON.stringify(selectedArticle.value))
+  alert(JSON.stringify(articles[index]));
+  
   // alert('marked words: '+JSON.stringify(selectedArticle.value.marked_words));
 
   nextTick(() => {
@@ -827,10 +849,10 @@ function selectArticle(index){
   // alert('selectedArticle: '+ JSON.stringify(selectedArticle.value));
 
   if (newArticleID_arr.includes(selectedArticle.value.id)){
-    //alert('新文章')
+    alert('新文章')
     isEditing.value = true
   }else{
-    //alert('舊文章')
+    alert('舊文章')
     isEditing.value = false
   }
 }
@@ -996,6 +1018,7 @@ async function deleteMarkedWord(word) {
 
 
 watch(selectedArticle.value, (newItem) => {
+  // alert('watch selectedArticle觸發');
   if (editableTitle.value && editableTitle.value.innerText !== newItem.title){
     editableTitle.value.innerText = newItem.title;
   }
@@ -1004,6 +1027,17 @@ watch(selectedArticle.value, (newItem) => {
     noteArea.value.innerText = newItem.note;
   }
 })
+
+// watch(selectedArticle, (newItem) => {
+//   alert('watch selectedArticle觸發');
+//   if (editableTitle.value && editableTitle.value.innerText !== newItem.title){
+//     editableTitle.value.innerText = newItem.title;
+//   }
+
+//   if (noteArea.value.innerText != newItem.note){
+//     noteArea.value.innerText = newItem.note;
+//   }
+// })
 
 
 
