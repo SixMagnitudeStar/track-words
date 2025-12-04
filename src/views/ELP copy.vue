@@ -1,4 +1,194 @@
+<template>
+  <div id="ELP-page">
+    <div v-if="mode === 1">
+      <div>
+        <h1>聽力複習</h1>
+        <h3>手動添加 / 從標記單字中載入你要聽力複習的單字</h3>
+        <h3>建立好，接著點擊喇叭開始聆聽</h3>
+      </div>
 
+      <div class="list-title-div">
+        <h2>詞彙列表&nbsp;</h2>
+        <div class="tooltip">
+          <span @click="randomListening">🎲🔊</span>
+          <span class="tooltiptext">隨機從列表中撥放單字聆聽</span>
+        </div>
+
+        &nbsp;|&nbsp;
+        <div class="tooltip">
+          <img
+            @click="refreshListeningList"
+            class="refresh_icon"
+            alt="Refresh list"
+            src="@/assets/rotate.png"
+          />
+          <span class="tooltiptext">刷新列表</span>
+        </div>
+        &nbsp;|&nbsp;&nbsp;&nbsp;
+        <div class="tooltip" @click="loadMarkedWords">
+          <div class="parallel-div">
+            <img src="@/assets/sticky-note.png" alt="" />
+            <img
+              class="arrow-down icon"
+              src="@/assets/forward.png"
+              alt="將標記單字載入聆聽列表"
+            />
+          </div>
+          <span class="tooltiptext">將標記單字載入聆聽列表</span>
+        </div>
+
+        <span>
+          <img
+            class="or-icon"
+            src="@/assets/or-arrows.png"
+            title="將標記單字載入聆聽列表 OR 手動添加單字到列表"
+            alt="OR"
+          />
+        </span>
+
+        <div>
+          <input
+            v-model="vocab"
+            type="text"
+            placeholder="Enter a word & phrase"
+            @keyup.enter="appendVocab(vocab)"
+          />
+          &nbsp;
+          <button @click="appendVocab(vocab)">Add to vocabList</button>&nbsp;
+          <button @click="speak(vocab)">🔊 listening</button>
+        </div>
+      </div>
+
+      <div id="ListDiv">
+        <div>
+          <ul>
+            <li v-for="(item, index) in vocabList" :key="index">
+              {{ item }}
+              <div class="tooltip">
+                <span @click="speak(item)" title="listening vocab">🔊</span>
+                <span class="tooltiptext">listening vocab</span>
+              </div>
+              <div class="tooltip">
+                <img
+                  class="bin"
+                  src="@/assets/bin.png"
+                  @click="removeVocab(index)"
+                  alt="delete"
+                />
+                <span class="tooltiptext">Delete vocab</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <ul>
+            <li v-for="(item, index) in listeningList" :key="index">{{ item }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <hr />
+      <h2>隨機聆聽測驗</h2>
+    </div>
+    <div v-else>
+      <h3>測試</h3>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import api from '@/axios.js'
+
+// 狀態管理
+const mode = ref(1)
+const vocab = ref('')
+const vocabList = ref([])
+const listeningList = ref([])
+const listeningVocab = ref('')
+
+// Methods
+const speak = (text) => {
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = 'en-US'
+  speechSynthesis.speak(utterance)
+}
+
+
+
+const appendVocab = (word) => {
+  if (word.trim() === '') {
+    alert('請輸入要添加的單字!')
+    return
+  }
+  vocabList.value.push(word)
+  vocab.value = ''
+  listeningList.value = [...vocabList.value]
+}
+
+
+const addVocabToListAPI = async (word) => {
+  try {
+    await api.post('/marked', { word })
+    console.log(`單字 ${word} 已成功添加到標記單字列表`)
+  } catch (err) {
+    console.error(`添加單字 ${word} 到標記單字列表失敗`, err)
+  }
+}
+
+
+const refreshListeningList = () => {
+  listeningList.value = [...vocabList.value]
+}
+
+
+
+
+
+const randomListening = () => {
+  if (listeningList.value.length === 0) {
+    alert('聆聽列表已空，請先新增詞彙')
+    return
+  }
+  const randomIndex = Math.floor(Math.random() * listeningList.value.length)
+  listeningVocab.value = listeningList.value[randomIndex]
+  listeningList.value.splice(randomIndex, 1)
+  speak(listeningVocab.value)
+}
+
+const reListening = () => {
+  speak(listeningVocab.value)
+}
+
+const removeVocab = (index) => {
+  const word = vocabList.value[index]
+  const idx = listeningList.value.indexOf(word)
+  if (idx !== -1) {
+    const lastIndex = listeningList.value.length - 1
+    listeningList.value[idx] = listeningList.value[lastIndex]
+    listeningList.value.pop()
+  }
+  vocabList.value.splice(index, 1)
+}
+
+const loadMarkedWords = async () => {
+  try {
+    const response = await api.get('/markedwords')
+    response.data.words.forEach((item) => {
+      listeningList.value.push(item.word)
+      vocabList.value.push(item.word)
+    })
+    console.log('標記單字載入詞彙列表成功')
+  } catch (err) {
+    console.error('標記單字載入詞彙列表失敗', err)
+  }
+}
+</script>
+
+<style scoped>
+/* 原本的 style 可以直接保留 */
+</style>
+<!-- 
 <template>
 
   <div id="ELP-page">
@@ -346,4 +536,4 @@ ul{
 
 
 
-</style>
+</style> -->

@@ -1,536 +1,343 @@
 <template>
-
-  <!-- ELP 頁面：聽力練習與管理界面 -->
   <div id="ELP-page">
-    <div v-if="mode===1">
-      <!-- 頁面標題區（Header）：顯示頁面名稱與説明文字 -->
-        <div>
-          <h1>聽力複習</h1>
-          <h3>手動添加 / 從標記單字中載入你要聽力複習的單字</h3>
-          <h3>建立好，接著點擊喇叭開始聆聽</h3>
+    <div v-if="mode === 1">
+      <div>
+        <h1>聽力複習</h1>
+        <h3>手動添加 / 從標記單字中載入你要聽力複習的單字</h3>
+        <h3>建立好，接著點擊喇叭開始聆聽</h3>
+      </div>
+
+      <div class="parallel-div">
+        <button @click="addVocabList">新增詞彙列表</button>
+        <div v-if="!showAllLists && vocabLists.length > 3">
+          <button @click="toggleShowAllLists">展開全部 >></button>
         </div>
+        <div v-else>
+          <button @click="toggleShowAllLists"><< 收合</button>
+        </div>
+      </div>
 
-        
+      <div class="vocab-lists-container">
+        <div v-for="list in visibleVocabLists" :key="list.id" class="vocab-list-card">
+          <div class="vocab-list-header">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <div class="list-name-wrapper">
+                <div v-if="list.editing">
+                  <input ref="listNameRefs" v-model="list.nameDraft" type="text" title="請輸入列表名稱" />
+                </div>
+                <div v-else>
+                  <h3 style="margin:0">{{ list.name }}</h3>
+                </div>
+              </div>
+              <div @click="toggleEditListName(list)" class="list-name-toggle">
+                <div v-if="list.editing" class="tooltip">
+                  <img src="@/assets/check.png" alt="儲存列表名稱" />
+                  <span class="tooltiptext">儲存列表名稱</span>
+                </div>
+                <div v-else class="tooltip">
+                  <span>✏️</span>
+                  <span class="tooltiptext">編輯列表名稱</span>
+                </div>
+              </div>|
+            </div>
 
-        <!-- 全域詞彙清單控制區：保留舊版（single list）功能與匯入/播放控制 -->
-        <div class="list-title-div">
-            <!-- <h2>詞彙列表&nbsp;</h2>
-            <div class="tooltip" >
-              <span @click="randomListening">🎲🔊</span>
+            <div v-if="list.listeningMode" 
+                 @click="toggleListeningMode(list)" 
+                 :class="{ active: list.listeningMode }"
+                 class="mode-toggle-btn"
+                 :title="list.listeningMode ? '退出聆聽模式' : '進入聆聽模式'">
+              🔊 聆聽中
+            </div>
+            <div v-else class="tooltip" @click="toggleListeningMode(list)">
+              <div class="parallel-div">
+                <img class="arrow-down icon" src="@/assets/forward.png" alt="進入聆聽模式" />
+                🎲🔊 
+              </div>
+              <span class="tooltiptext">進入聆聽模式</span>
+            </div>
+          </div>
+
+          <div v-if="!list.listeningMode" class="header-controls vocab-list-controls">
+            <input v-model="list.input" type="text" placeholder="Enter a word & phrase" 
+                   @keyup.enter="appendVocabToList(list)" />
+            <button @click="appendVocabToList(list)">Add</button>
+            <div class="tooltip" @click="loadMarkedWordsToList(list)">
+              <div class="parallel-div">
+                <img src="@/assets/sticky-note.png" alt="">
+                <img class="arrow-down icon" src="@/assets/forward.png" alt="將標記單字載入聆聽列表">
+              </div>
+              <span class="tooltiptext">將標記單字載入此詞彙列表</span>
+            </div>
+          </div>
+
+          <div v-else class="listening-mode-controls">
+            <div class="tooltip">
+              <span @click="randomListeningFromList(list)">🎲🔊</span>
               <span class="tooltiptext">隨機從列表中撥放單字聆聽</span>
             </div>
-
-            &nbsp;|&nbsp; 
-            <div class="tooltip" >
-              <img @click="refreshListeningList" class="refresh_icon" alt="Refresh list" src="@/assets/rotate.png">
+            <div class="tooltip">
+              <img @click="refreshListeningMode(list)" class="refresh_icon" alt="Refresh list" src="@/assets/rotate.png">
               <span class="tooltiptext">刷新列表</span>
             </div>
-            &nbsp;|&nbsp;&nbsp;&nbsp;   
-              <div class="tooltip" @click="loadMarkedWords()">
-                <div class="parallel-div">
-                  <img src="@/assets/sticky-note.png" alt="">
-                  <img class="arrow-down icon" src="@/assets/forward.png"  alt="將標記單字載入聆聽列表" >
-                </div>
-                
-                <span class="tooltiptext">將標記單字載入聆聽列表</span>
-              </div> -->
-              <!-- <sapn>將標記單字載入聆聽列表/手動添加單字到列表</sapn> -->
-              <!-- <span>
-                
-                    <img  class="or-icon" src="@/assets/or-arrows.png" title="將標記單字載入聆聽列表 OR 手動添加單字到列表"  alt="OR" />
-              
-              </span>
-              <div>
-                <input v-model="vocab" type="text" placeholder="Enter a word & phrase"  @keyup.enter="appendVocab(vocab)"/>
-                &nbsp;
-                <button @click="appendVocab(vocab)">Add</button>&nbsp;
-                <button @click="speak(vocab)">🔊 listening</button>
-                
-              </div> -->
-
-        </div> 
-
-        <!-- 新功能：建立並顯示多個詞彙清單 -->
-        <!-- 新增詞彙列表按鈕：點擊新增一個獨立的詞彙清單（每個清單有自己的單字陣列） -->
-        <div class="parallel-div">
-          <div>
-            <button @click="addVocabList">新增詞彙列表</button>
           </div>
-          <!-- 展開後提供收合按鈕於標題列，方便收回 -->
-          <!-- <div v-if="showAllLists && vocabLists.length > 3">
-            <button class="expand-toggle-btn" @click="toggleShowAllLists"><< 收合</button>
-          </div> -->
-           <!-- 收合按鈕：僅在已展開時出現 -->
 
-            <!-- 展開全部按鈕：僅在未展開且清單大於3個時出現 -->
-            <div v-if="!showAllLists && vocabLists.length > 3">
-              <button  @click="toggleShowAllLists">展開全部 >></button>
-            </div>
-
-            <!-- 收合按鈕：僅在已展開時出現 -->
-            <div v-else>
-              <button @click="toggleShowAllLists"><< 收合</button>
-            </div>
-                
-        </div>
-
-        <!-- 多清單區：每個清單是一個卡片（vocab-list-card），包含名稱、匯入與輸入/新增欄位，以及單字清單顯示 -->
-        <div class="vocab-lists-container">
-          <!-- 單一清單卡片：每個卡片包含 list.name、list.words，以及每清單專屬的控制項 -->
-          <div v-for="(list, idx) in visibleVocabLists" :key="list.id" class="vocab-list-card">
-            <div class="vocab-list-header">
-              <div style="display:flex; gap:8px; align-items:center;">
-                <div class="list-name-wrapper">
-                  <div  v-if="list.editing">
-                    <input :ref="'listName-' + list.id" v-model="list.nameDraft" type="text" class="" title="請輸入列表名稱"  />
-                  </div>
-                  <div v-else>
-                    <h3 style="margin:0">{{ list.name }}</h3>
-                  </div>
-                </div>
-                <div @click="toggleEditListName(list)" class="list-name-toggle">
-                  <div  v-if="list.editing" class="tooltip">  
-                      <img  src="@/assets/check.png"  alt="儲存列表名稱" >
-                      <span class="tooltiptext">儲存列表名稱</span>
-                  </div>
-                  <div  v-else class="tooltip" >
-                    <span>✏️</span>
-                    <span class="tooltiptext">編輯列表名稱</span>
-                  </div>
-                </div>|
-              </div>
-              <!-- 聆聽模式切換按鈕 -->
-               <div v-if="list.listeningMode" 
-           
-                @click="toggleListeningMode(list)" 
-                :class="{ active: list.listeningMode }"
-                class="mode-toggle-btn"
-                :title="list.listeningMode ? '退出聆聽模式' : '進入聆聽模式'"
-              >
-              🔊 聆聽中
-                <!-- {{ list.listeningMode ? '🔊 聆聽中' : '✏️ 編輯545' }} -->
-           
-              </div>
-              <div v-else class="tooltip" @click="toggleListeningMode(list)">
-                <div class="parallel-div">
-                
-                  <img class="arrow-down icon" src="@/assets/forward.png"  alt="進入聆聽模式" >
-                  🎲🔊 
-                </div>
-                
-                <span class="tooltiptext">進入聆聽模式</span>
-              </div>
-            </div>
-
-            <!-- 編輯模式：顯示輸入框與標記單字載入 -->
-            <div v-if="!list.listeningMode" class="header-controls vocab-list-controls">
-              <!-- <div class="header-input list-input-area"> -->
-                <input :ref="'listInput-' + list.id" v-model="list.input" type="text" placeholder="Enter a word & phrase" @keyup.enter="appendVocabToList(list)"/>
-              <!-- </div> -->
-              <button @click="appendVocabToList(list)">Add</button>
-              <!-- <span @click="speak(list.input)" title="listening">🔊</span> -->
-              <!-- <button @click="speak(list.input)" title="listening">🔊</button> -->
-              <div class="tooltip" @click="loadMarkedWordsToList(list)">
-                <div class="parallel-div">
-                  <img src="@/assets/sticky-note.png" alt="">
-                  <img class="arrow-down icon" src="@/assets/forward.png" alt="將標記單字載入聆聽列表">
-                </div>
-                <span class="tooltiptext">將標記單字載入此詞彙列表</span>
-              </div>
-
-
-            </div>
-
-            <!-- 聆聽模式：只顯示隨機撥放與刷新 -->
-            <div v-else class="listening-mode-controls">
-              <div class="tooltip" >
-                <span @click="randomListeningFromList(list)">🎲🔊</span>
-                <span class="tooltiptext">隨機從列表中撥放單字聆聽</span>
-              </div>
-              <!-- <button @click="randomListeningFromList(list)" class="primary-btn">🎲🔊 隨機撥放</button> -->
-              <div class="tooltip" >
-                <img @click="refreshListeningMode(list)" class="refresh_icon" alt="Refresh list" src="@/assets/rotate.png">
-                <span class="tooltiptext">刷新列表</span>
-              </div>
-              <!-- <button @click="refreshListeningMode(list)" class="secondary-btn">🔄 恢復列表</button> -->
-            </div>
-
-            <!-- ...existing vocab list body... -->
-             
-            <div  v-if="!list.listeningMode" class="vocab-list-body">
-              <ul>
-                <li v-for="(w, idx) in list.words" :key="idx">{{ w }}
-                  <div class="tooltip">
-                    <span @click="speak(w)" title="listening vocab">🔊</span>
-                    <span class="tooltiptext">listening vocab</span>
-                  </div>
-                  <div class="tooltip">
-                      <img class="bin" src="@/assets/bin.png" @click="removeVocab(list, idx)" alt="delete" >
-                      <span class="tooltiptext">Delete vocab</span>
-                    </div>
-                </li>
-              </ul>
-            </div>
-
-            <div v-else class="parallel-div">
-              <div class="vocab-list">
-                <ul>
-                  <li v-for="(w, idx) in list.listeningWords" :key="idx">{{ w }}
-                    <div class="tooltip">
-                      <span @click="speak(w)" title="listening vocab">🔊</span>
-                      <span class="tooltiptext">listening vocab</span>
-                    </div>
-          
-                  </li>
-                </ul>
-              </div>
-
-              <div class="vocab-list">
-                <ul>
-                  <li v-for="(w, idx) in list.playedWords" :key="idx">{{ w }}
-                    <div class="tooltip">
-                      <span @click="speak(w)" title="listening vocab">🔊</span>
-                      <span class="tooltiptext">listening vocab</span>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-
-
-
-
-            </div>
-
-          </div>
-        </div>
-        <!-- <div class="listening-div">
-          <span>🎲🔊</span>
-          <img @click="refreshListeningList" class="refresh_icon" alt="Refresh" src="@/assets/rotate.png" title="refresh listeningList"> 
-          ：<button @click="randomListening"> random listening</button> &nbsp;
-          <button @click="reListening">🔊 listening again</button><span>{{listeningVocab }}</span>
-        
-        </div> -->
-
-        <!-- <div id="ListDiv">
-          <div>
+          <div v-if="!list.listeningMode" class="vocab-list-body">
             <ul>
-              <li v-for="(vocab, index) in vocabList" :key="index">{{vocab}}
+              <li v-for="(w, idx) in list.words" :key="idx">{{ w.word }}
                 <div class="tooltip">
-                  <span @click="speak(vocab)" title="listening vocab">🔊</span>
+                  <span @click="speak(w.word)" title="listening vocab">🔊</span>
                   <span class="tooltiptext">listening vocab</span>
                 </div>
                 <div class="tooltip">
-                  <img class="bin" src="@/assets/bin.png" @click="removeVocab(index)" alt="delete" >
+                  <img class="bin" src="@/assets/bin.png" @click="removeVocab(list, idx)" alt="delete" >
                   <span class="tooltiptext">Delete vocab</span>
                 </div>
               </li>
             </ul>
           </div>
-          <div>
-            <h2>聆聽列表
-              <span>🎲🔊</span>
-              <img @click="refreshListeningList" class="refresh_icon" alt="Refresh" src="@/assets/rotate.png" title="refresh listeningList"> 
-              ：<button @click="randomListening"> random listening</button> &nbsp;
-              <button @click="reListening">🔊 listening again</button><span>{{listeningVocab }}</span> &nbsp;
-            </h2>
-            <ul>
-              <li v-for="(vocab, index) in listeningList" :key="index">{{vocab}}</li>
-            </ul>
+
+          <div v-else class="parallel-div">
+            <div class="vocab-list">
+              <ul>
+                <li v-for="(w, idx) in list.listeningWords" :key="idx">{{ w }}
+                  <div class="tooltip">
+                    <span @click="speak(w)" title="listening vocab">🔊</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="vocab-list">
+              <ul>
+                <li v-for="(w, idx) in list.playedWords" :key="idx">{{ w }}
+                  <div class="tooltip">
+                    <span @click="speak(w)" title="listening vocab">🔊</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
           </div>
-        </div> -->
-        <!-- <hr>
-        <h2>隨機聆聽測驗</h2> -->
+
+        </div>
+      </div>
     </div>
-    <!-- <div v-else>
-      <h3>測試</h3>
-    </div> -->
   </div>
- 
-  </template>
-  
-  <script>
-  
-  import api from '@/axios.js'
-  export default {
-    name: 'ELPView',
-    data() {
-      return {
-        // UI 模式：1 = 主模式；其他值將顯示不同的視圖（於模板中切換顯示）
-        mode : 1,
-        vocab: '',
-        // 舊有 / 全域 vocab 清單（簡單的字串陣列）
-        vocabList: [],
-        playedList:[],
-        listeningList: [],
-        // 目前正在播放或選中的聽力單字
-        listeningVocab: ''
-        ,
-        // 多個詞彙清單 (vocabLists) - 資料排序說明：
-        // 新增的清單會插入陣列前端（最新的在最前面）
-        // 顯示邏輯會預設顯示最前（最新）的三筆，若點選展開則顯示全部
-        // 多個詞彙清單 (vocabLists)
-        // 多個詞彙清單 (vocabLists)
-        // 以下是每個 `list` 物件的欄位說明：
-        // - id: 唯一識別數值 (Number)，用於 v-for 的 key
-        // - name: 顯示用的清單名稱 (String)
-        // - nameDraft: 編輯名稱時的暫存欄位 (String)，在儲存前放置使用者輸入的暫存文字
-        // - words: 與該清單綁定的單字陣列 (Array<String>)
-        // - input: 該清單的臨時輸入欄位，用來在 per-list UI 新增單字 (String)
-        // - editing: 布林值 (Boolean)，表示目前是否處於清單名稱編輯狀態
-        // 範例物件： { id: 1, name: 'List 1', nameDraft: 'List 1', words: ['apple'], input: '', editing: false }
-        vocabLists: [],
-        // 控制是否展開全部清單 (false 預設只顯示前三個)
-        showAllLists: false,
-        nextVocabListId: 1,
-        activeVocabListId: null
+</template>
+
+<script>
+import { ref, computed, onMounted, nextTick, reactive } from 'vue'
+//import { ref, reactive, computed, nextTick } from 'vue'
+import api from '@/axios.js'
+
+export default {
+  setup() {
+    const mode = ref(1)
+    const vocab = ref('')
+    const vocabLists = ref([])
+    const showAllLists = ref(false)
+    const nextVocabListId = ref(1)
+    const listNameRefs = ref([])  // ref array for inputs
+
+    // API 取得詞彙列表
+    const fetchVocabLists = async () => {
+      try {
+        const response = await api.get('/vocabulary_lists/')
+        
+        // 將後端回傳的每個 list 都用 reactive 包裝
+        vocabLists.value = response.data.map(list => reactive({
+          ...list,
+          words: list.words || [],             // 從後端取得的單字陣列
+          input: '',                            // 新增輸入框值
+          editing: false,                       // 是否正在編輯名稱
+          listeningMode: false,                 // 聆聽模式
+          listeningWords: [],                   // 播放單字序列
+          playedWords: [],                      // 已播放過的單字
+          currentListeningWord: ''              // 當前播放的單字
+        }))
+
+        console.log('詞彙列表載入成功', vocabLists.value)
+      } catch (err) {
+        console.error('詞彙列表載入失敗', err)
       }
-    },
-    computed: {
-      // 依照 showAllLists 判斷要顯示的清單（預設顯示「最新」的三筆）
-      visibleVocabLists(){
-        const MAX_VISIBLE = 3;
-        if (this.showAllLists) return this.vocabLists;
-        // 顯示最前面的三筆（最新的三筆），若長度不足則全部顯示
-        return this.vocabLists.slice(0, MAX_VISIBLE);
-      }
-    },
-    methods: {
-      // 使用瀏覽器語音合成（TTS）來播放指定文字
-      speak(text) {
-        doSpeak(text) 
-      },
-      // 從聆聽列表中隨機抽取單字並播放
-      // 使用輔助函式 doRandomListening 來執行選取與移除邏輯
-      randomListening(){
-        doRandomListening(this);
-      },
-      // 將單字加入全域詞彙清單（vocabList）
-      // 此函式供舊有的單一清單 UI (vocabList) 使用
-      appendVocab(vocab){
-        if (vocab.trim() === ''){
-          alert('請輸入要添加的單字!');
-          return;
-        }
-
-        this.vocabList.push(vocab);
-        this.vocab = '';
-        this.listeningList = [...this.vocabList];
-      },
-      // 從舊的 vocabList 刷新聽力列表（複製 vaboList 的內容）
-      refreshListeningList(){
-        doRefreshListeningList(this);
-      },
-      // 建立一個新的命名詞彙清單，並 focus 該清單的名稱輸入欄位。
-      // 新增的 list 會包含自己的 words 陣列與 per-list 的 input 欄位
-      addVocabList(){
-        const id = this.nextVocabListId++;
-        const list = { 
-          id, 
-          name: `List ${id}`, 
-          words: [], 
-          playedWords: [],
-          input: '', 
-          editing: true, 
-          nameDraft: `List ${id}`,
-          listeningMode: false,        // 新增：聆聽模式標誌
-          listeningWords: [],          // 新增：聆聽時的副本
-          currentListeningWord: ''     // 新增：目前播放的單字
-        };
-        // 將新建的 list 插入陣列前端（unshift）以保持「最新的在最前面」排序
-        this.vocabLists.unshift(list);
-        this.activeVocabListId = id;
-        this.$nextTick(()=>{
-          const refName = 'listName-' + id;
-          const el = this.$refs[refName];
-          if (el){ if (Array.isArray(el)) el[0].focus(); else el.focus(); }
-        });
-      },
-      // 切換清單檢視：展開所有清單或只顯示前三個
-      toggleShowAllLists(){
-        this.showAllLists = !this.showAllLists;
-      },
-      // 將輸入值加入指定清單的 words 陣列
-      // 參數說明：list - 目標清單物件 (list.words 為其陣列)
-      appendVocabToList(list){
-        const value = (list.input || '').trim();
-        if (!value){ alert('請輸入要添加的單字!'); return; }
-        list.words.push(value);
-        list.input = '';
-      },
-      // 切換清單名稱的編輯狀態；離開編輯時儲存名稱
-      // 當 editing 為 true 時可在 nameDraft 輸入欄編輯名稱；儲存後將 nameDraft 複製到 name
-      toggleEditListName(list){
-        if (list.editing){
-          const name = (list.nameDraft || '').trim()
-          if (name === '') { alert('列表名稱不可為空'); return }
-          list.name = name
-          list.editing = false
-        } else {
-          list.nameDraft = list.name
-          list.editing = true
-          this.$nextTick(()=>{ const refName = 'listName-' + list.id; const el = this.$refs[refName]; if (el){ if (Array.isArray(el)) el[0].focus(); else el.focus() } })
-        }
-      },
-      // 將後端標記的單字載入到此清單中（避免重複）
-      loadMarkedWordsToList(list){
-        doloadMarkedWordsToList(this, list)
-      },
-      reListening(){
-        doReListening(this);
-      },
-
-      // 切換聆聽模式
-      toggleListeningMode(list) {
-        if (!list.listeningMode && list.words.length === 0) {
-          alert('列表為空，請先新增單字');
-          return;
-        }
-        list.listeningMode = !list.listeningMode;
-        if (list.listeningMode) {
-          // 進入聆聽模式時，複製詞彙列表
-          list.listeningWords = [...list.words];
-        }
-      },
-
-      // 從指定清單隨機撥放單字
-      randomListeningFromList(list) {
-        if (list.listeningWords.length === 0) {
-          alert('聆聽列表已空');
-          return;
-        }
-        const randomIndex = Math.floor(Math.random() * list.listeningWords.length);
-        list.currentListeningWord = list.listeningWords[randomIndex];
-        this.speak(list.currentListeningWord);
-        list.listeningWords.splice(randomIndex, 1);
-        alert(JSON.stringify(list.listeningWords));
-        // 將當前撥放的單字加入已撥放清單中
-        list.playedWords.push(list.currentListeningWord);
-
-      },
-
-      // 刷新聆聽模式下的單字列表
-      refreshListeningMode(list) {
-        list.listeningWords = [...list.words];
-        list.currentListeningWord = '';
-
-        list.playedWords = [];
-      },
-
-      // 依據索引刪除詞彙列表與聆聽列表中的單字
-      // 從舊有的 `vocabList` 刪除單字，同時使用 swap-and-pop 技巧從 `listeningList` 中移除對應單字，
-      // 以避免 O(n) 的陣列內部 splice 重排成本。
-      removeVocab(list,vocabIndex){
-        // 取得要移除的單字
-        //const word = this.vocabList[vocabIndex];
-        // const word = this.listeningWords[vocabIndex];
-
-        // 找尋找該單字是否存在於聆聽列表中，若存在的話取得找到的第一個索引 (若匹配多個也僅刪除一個)
-        // const index = this.listeningList.indexOf(word);
-        // const index = this.playedWords.indexOf(word);
-
-        // if (index !== -1) {
-        //   // 取得陣列最後一個索引與元素
-        //   const lastIndex = this.playedWords.length - 1;
-        //   const lastWord = this.playedWords[lastIndex];
-
-        //   // 將目標元素與最後一個元素交換位置，然後用 pop 移除最後一個 (swap-and-pop(陣列中移除元素，順序若不重要可用的技巧)
-        //   this.playedWords[index] = lastWord;
-        //   this.playedWords.pop();
-        // }
-
-        // 將單字從詞彙列表中移除
-        list.words.splice(vocabIndex, 1);
-      },
-      loadMarkedWords(){
-        doloadMarkedWords(this)
-      }
-
-      
-
     }
-  }
 
-  function doSpeak(text){
-      // 建立 SpeechSynthesisUtterance 物件用於播放文字（使用瀏覽器內建語音合成功能）
-      const utterance = new SpeechSynthesisUtterance(text);
-
-      //指定語音的語言
-      utterance.lang = 'en-US'; // 可改為 'zh-TW'、'ja-JP' 等
-
-
-      //語音合成器物件呼叫speak method執行上面建立的語音內容物件
-      speechSynthesis.speak(utterance);
-  }
-
-
-
-
-
-async function doloadMarkedWords(vm){
-  // 從後端抓取標記單字，並加入到舊有的全域 vocabList 與 listeningList。
-  // vm: component 實例（Options API）之傳入，方便更新其響應式陣列。
-
-  try{
-    const response = await api.get("/markedwords");
-
-    response.data.words.forEach((item) => {
-      vm.listeningList.push(item.word)
-      vm.vocabList.push(item.word)
+    // onMounted 時自動呼叫
+    onMounted(() => {
+      fetchVocabLists()
     })
-    console.log('標記單字載入詞彙列表成功')
 
-  }catch(err){
-    console.error('標記單字載入詞彙列表失敗',err)
-  }
-}
+    const visibleVocabLists = computed(() => {
+      const MAX_VISIBLE = 3
+      return showAllLists.value ? vocabLists.value : vocabLists.value.slice(0, MAX_VISIBLE)
+    })
 
-  // 隨機播放輔助函式：從 vm.listeningList 隨機抽一個單字，設定 vm.listeningVocab 並呼叫 speak 播放。
-  // 會從 vm.listeningList 中移除該單字，避免在同一次聆聽會話中重複播放。
-  function doRandomListening(vm){
-    if (vm.listeningList.length ===0){
-      alert('聆聽列表已空，請先新增詞彙');
-      return;
+    // ------------------- METHODS -------------------
+
+    const speak = (text) => {
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = 'en-US'
+      speechSynthesis.speak(utterance)
     }
 
-    // 從聆聽列表中隨機取得索引
-    let randomIndex = Math.floor(Math.random() * vm.listeningList.length);
-    
-    // 取得要聆聽的詞彙
-    // let randomWord = this.listeningList[randomIndex];
-    vm.listeningVocab = vm.listeningList[randomIndex];
+  const addVocabList = async () => {
+    const id = nextVocabListId.value++
 
-    // 將該詞彙從聆聽列表中移除
-    vm.listeningList.splice(randomIndex, 1);
-    
-    vm.speak(vm.listeningVocab);
+    // 先建立本地 reactive list
+    const list = reactive({
+      id,
+      name: `List ${id}`,
+      nameDraft: `List ${id}`,
+      words: [],
+      input: '',
+      editing: true,
+      listeningMode: false,
+      listeningWords: [],
+      playedWords: [],
+      currentListeningWord: ''
+    })
+
+    // 將本地 list 插入陣列前端
+    vocabLists.value.unshift(list)
+
+    // 呼叫後端 API 建立列表
+    try {
+      const response = await api.post('vocabulary_lists/', {
+        name: list.nameDraft,
+        description: ''
+      })
+
+
+      // 將後端回傳的 id 覆蓋本地 id（若你希望同步後端 id）
+      list.id = response.data.list.id
+      list.name = response.data.list.name
+      list.nameDraft = response.data.list.name
+      console.log('列表新增成功', response.data)
+    } catch (err) {
+      console.error('新增列表失敗', err)
+      alert('無法新增列表，請稍後再試')
+      // 若失敗，可以選擇從本地移除該 list
+      vocabLists.value.shift()
+      return
+    }
+
+    // focus 新增列表的名稱欄位
+    nextTick(() => {
+      const el = listNameRefs.value[0]
+      if (el) el.focus()
+    })
   }
 
 
 
-  // 將全域 vocabList 的內容複製到 listeningList（淺拷貝）
-  function doRefreshListeningList (vm) {
-    vm.listeningList = vm.vocabList;
+
+    const toggleShowAllLists = () => {
+      showAllLists.value = !showAllLists.value
+    }
+
+    const toggleEditListName = (list) => {
+      if (list.editing) {
+        const name = list.nameDraft.trim()
+        if (name === '') { alert('列表名稱不可為空'); return }
+        list.name = name
+        list.editing = false
+      } else {
+        list.nameDraft = list.name
+        list.editing = true
+        nextTick(() => {
+          const el = listNameRefs.value[0]
+          if (el) el.focus()
+        })
+      }
+    }
+
+    const appendVocabToList = async (list) => {
+      const value = list.input.trim()
+      if (!value) { 
+        alert('請輸入要添加的單字!'); 
+        return 
+      }
+
+      // 先更新前端畫面
+      list.words.push(value)
+      list.input = ''
+
+      // 呼叫後端 API
+      try {
+        await api.post(`/vocabulary_lists/${list.id}/words`, {
+          // list_id: list.id,
+          word: value
+        })
+        console.log(`單字 "${value}" 已添加到後端`)
+      } catch (err) {
+        console.error(`添加單字 "${value}" 失敗`, err)
+      }
+
+
+    }
+    const toggleListeningMode = (list) => {
+      if (!list.listeningMode && list.words.length === 0) {
+        alert('列表為空，請先新增單字')
+        return
+      }
+      list.listeningMode = !list.listeningMode
+      if (list.listeningMode) list.listeningWords = [...list.words]
+    }
+
+    const randomListeningFromList = (list) => {
+      if (list.listeningWords.length === 0) {
+        alert('聆聽列表已空')
+        return
+      }
+      const randomIndex = Math.floor(Math.random() * list.listeningWords.length)
+      const word = list.listeningWords[randomIndex]
+      list.currentListeningWord = word
+      speak(word)
+      list.listeningWords.splice(randomIndex, 1)
+      list.playedWords.push(word)
+    }
+
+    const refreshListeningMode = (list) => {
+      list.listeningWords = [...list.words]
+      list.playedWords = []
+      list.currentListeningWord = ''
+    }
+
+    const removeVocab = (list, idx) => {
+      list.words.splice(idx, 1)
+    }
+
+    const loadMarkedWordsToList = async (list) => {
+      try {
+        const res = await api.get('/markedwords')
+        res.data.words.forEach(item => {
+          if (!list.words.includes(item.word)) list.words.push(item.word)
+        })
+        console.log('標記單字載入成功')
+      } catch (err) {
+        console.error('標記單字載入失敗', err)
+      }
+    }
+
+    return {
+      mode,
+      vocab,
+      vocabLists,
+      showAllLists,
+      visibleVocabLists,
+      addVocabList,
+      toggleShowAllLists,
+      toggleEditListName,
+      appendVocabToList,
+      toggleListeningMode,
+      randomListeningFromList,
+      refreshListeningMode,
+      removeVocab,
+      loadMarkedWordsToList,
+      speak,
+      listNameRefs
+    }
   }
-
-
-// 將標記單字載入至指定清單的輔助函式
-// vm: 傳入的 component 實例；list: 目標 list 物件，單字會推送到 list.words
-async function doloadMarkedWordsToList(vm, list){
-  try{
-    const response = await api.get('/markedwords')
-    response.data.words.forEach((item)=>{ if (!list.words.includes(item.word)) list.words.push(item.word) })
-    console.log('標記單字載入至詞彙列表成功')
-  }catch(err){ console.error('標記單字載入至詞彙列表失敗', err) }
 }
-
-  function doReListening(vm){
-    // 重新播放目前 vm 的 listeningVocab
-    vm.speak(vm.listeningVocab);
-  }
-
-
-  </script>
-
+</script>
 
 <style scoped>
 
