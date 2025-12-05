@@ -1,94 +1,101 @@
-
-
 <template>
-  <div id="container">
+  <div id="container" >
 
-    <div id="toggle-sidebar-btn-wrapper" v-if="isLoggedIn">
-      <img
-        id="toggle-sidebar-btn"
-        :src="toggleSideBarIcon"
-        @click="() => { showPanel = !showPanel; switchToggleSideIcon(); }"
-      />
+    <div  id="toggle-sidebar-btn-wrapper" v-if="isLoggedIn">
+
+      <img id="toggle-sidebar-btn" :src="toggleSideBar_icon"  @click="() => { showPanel = !showPanel; switch_toggleSideIcon(); }" />
     </div>
 
+    <!-- 滑出的主區塊：包含輸入與列表 -->
     <transition name="slide">
       <div v-if="showPanel" class="panel">
-
-        <button id="close_btn" @click="closeSideBar">隱藏</button>
-
+      
+        <button id = 'close_btn' @click="closeSideBar">隱藏</button>
+        <!-- 輸入 + Add 按鈕 -->
         <div class="input-group">
           <input v-model="newItem" placeholder="輸入文字..." />
           <button @click="addItem">Add</button>
         </div>
 
+        <!-- 顯示列表 -->
         <ul class="item-list">
           <li v-for="(item, index) in items" :key="index">{{ item }}</li>
         </ul>
-
         <span class="iconBox logoutBox" @click="logout">
-          <img class="icon" src="../assets/logout.png" alt="登出" />
+          <img  class="icon" src="../assets/logout.png" alt="登出" />
           <span>登出</span>
         </span>
-
+        
       </div>
     </transition>
+    <!-- 固定的展開按鈕 -->
 
   </div>
 </template>
-
-<script setup>
-import { ref, computed } from 'vue'
+<script>
 import api from '@/axios.js'
 import { useAuthStore } from '@/auth.js'
+export default {
+  name: 'AppSideBar',
+  data() {
+    return {
+      newItem: '',
+      items: [],
+      showPanel: false,
+      toggleSideBar_icon : require('../assets/angle-double-left.png')
+      
+    };
+  },
+  computed: {
+    // 判斷是否登入
+    isLoggedIn() {
+      const auth = useAuthStore()
+      return auth.isLoggedIn
+    }
+  },
+  methods: {
+    addItem() {
+      const text = this.newItem.trim();
+      if (text) {
+        this.items.push(text);
+        this.newItem = '';
+      }
+    },
 
-// ---------- state ----------
-const newItem = ref('')
-const items = ref([])
-const showPanel = ref(false)
+    // 切換側邊欄展開/關閉 箭頭icon
+    switch_toggleSideIcon() {
+      this.toggleSideBar_icon = this.toggleSideBar_icon === require('../assets/angle-double-right.png')
+        ? require('../assets/angle-double-left.png')
+        : require('../assets/angle-double-right.png');
+    },
+    
+    // 登出
+    // async logout() {
+    //   try {
+    //     await api.post('/logout')
+    //     alert('登出成功!!')
+    //     localStorage.removeItem('token')  // 登出時清掉 token
+    //     this.$router.push('/login')  // <- 這一行就可以跳頁
+    //   } catch (err) {
+    //     console.error('422 details:', err.response?.data?.detail)
+    //     console.error(err)
+    //   }
+    // }
+    async logout() {
+    try {
+        await api.post('/logout')
+        const auth = useAuthStore()
+        auth.clearToken()       // ← 這裡清掉 Pinia token 也會觸發 computed
+        this.$router.push('/login')
+      } catch (err) {
+        console.error(err)
+      }
+    }
 
-const toggleSideBarIcon = ref(require('../assets/angle-double-left.png'))
+    }
+};
 
 
-// ---------- auth ----------
-const auth = useAuthStore()
-const isLoggedIn = computed(() => auth.isLoggedIn)
-
-
-// ---------- methods ----------
-function addItem() {
-  const text = newItem.value.trim()
-  if (text) {
-    items.value.push(text)
-    newItem.value = ''
-  }
-}
-
-function switchToggleSideIcon() {
-  toggleSideBarIcon.value =
-    toggleSideBarIcon.value === require('../assets/angle-double-right.png')
-      ? require('../assets/angle-double-left.png')
-      : require('../assets/angle-double-right.png')
-}
-
-function closeSideBar() {
-  showPanel.value = false
-}
-
-async function logout() {
-  try {
-    await api.post('/logout')
-    auth.clearToken()
-    // 使用 composition API 的 router
-    // 若在 <script setup>，用 useRouter()
-    router.push('/login')
-  } catch (err) {
-    console.error(err)
-  }
-}
-
-// Vue Router 在 <script setup> 中用 useRouter()
-import { useRouter } from 'vue-router'
-const router = useRouter()
 </script>
 
 

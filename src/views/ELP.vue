@@ -66,7 +66,10 @@
                 <img src="@/assets/sticky-note.png" alt="">
                 <img class="arrow-down icon" src="@/assets/forward.png" alt="將標記單字載入聆聽列表">
               </div>
-              <span class="tooltiptext">將標記單字載入此詞彙列表</span>
+                <div class="tooltiptext parallel-div">
+                  <span>將標記單字載入此詞彙列表</span>
+                  <span class="as">(不重複添加)</span>
+                </div>
             </div>
           </div>
 
@@ -262,10 +265,11 @@ export default {
 
       // 呼叫後端 API
       try {
-        await api.post(`/vocabulary_lists/${list.id}/words`, {
+        const res = await api.post(`/vocabulary_lists/${list.id}/words`, {
           // list_id: list.id,
           word: value
         })
+        list.words[list.words.length - 1] = res.data.word  // 用後端回傳的完整物件覆蓋
         console.log(`單字 "${value}" 已添加到後端`)
       } catch (err) {
         console.error(`添加單字 "${value}" 失敗`, err)
@@ -302,20 +306,40 @@ export default {
     }
 
     const removeVocab = (list, idx) => {
+      
+      const deletedWord = list.words[idx]
       list.words.splice(idx, 1)
+
+      try {
+        api.delete(`/vocabulary_lists/${list.id}/words/${deletedWord.id}`)
+        console.log(`單字 "${deletedWord.word}" 已從後端刪除`)
+      } catch (err) {
+        console.error(`刪除單字 "${deletedWord.word}}" 失敗`, err)
+      }
+
     }
 
     const loadMarkedWordsToList = async (list) => {
       try {
-        const res = await api.get('/markedwords')
-        res.data.words.forEach(item => {
-          if (!list.words.includes(item.word)) list.words.push(item.word)
-        })
-        console.log('標記單字載入成功')
+        const res = await api.get('/markedwords');
+        for (const item of res.data.words) {
+          if (list.words.includes(item.word)) continue; // 這裡就有效了
+
+          try {
+            const res = await api.post(`/vocabulary_lists/${list.id}/words`, {
+              word: item.word
+            });
+            console.log(`單字 "${item.word}" 已添加到後端`);
+            list.words.push(res.data.word); // 用後端回傳的完整物件添加到列表
+          } catch (err) {
+            console.error(`添加單字 "${item.word}" 失敗`, err);
+          }
+        }
+        console.log('標記單字載入成功');
       } catch (err) {
-        console.error('標記單字載入失敗', err)
+        console.error('標記單字載入失敗', err);
       }
-    }
+    };
 
     return {
       mode,
