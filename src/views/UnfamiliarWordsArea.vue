@@ -52,9 +52,9 @@
       - :key 使用 word.text（注意：若文字可能重複，建議改用唯一 id）
     -->
     <transition-group v-if="viewMode === 'list'" name="slide" tag="div" class="word-list">
-      <div class="word-item" v-for="word in filteredWords" :key="word.text">
+      <div class="word-item" v-for="word in filteredWords" :key="word.word">
         <div class="word-main">
-          <span class="word-text">{{ word.text }}</span>
+          <span class="word-text">{{ word.word }}</span>
           <span class="date-added">📅 {{ word.date }}</span>
         </div>
 
@@ -67,7 +67,7 @@
           </div>
 
           <!-- 🔥新增 DELETE 按鈕 -->
-          <button class="delete-btn" @click="deleteWord(word.text)">DELETE</button>
+          <button class="delete-btn" @click="deleteWord(word.id)">DELETE</button>
         </div>
       </div>
     </transition-group>
@@ -81,10 +81,10 @@
           <!-- 這裡把 filteredWords.filter 放在 template 中會在每次 render 時重新評估過濾
                效能上可接受（對少量資料），但若資料量變大可以把「已分好群的結果」抽成 computed 以避免重複計算 -->
           <li
-            v-for="word in filteredWords.filter(w => w.text.startsWith(letter.toLowerCase()))"
-            :key="word.text"
+            v-for="word in filteredWords.filter(w => w.word.startsWith(letter.toLowerCase()))"
+            :key="word.id"
           >
-            {{ word.text }}
+            {{ word.word }}
           </li>
         </ul>
       </div>
@@ -100,7 +100,14 @@
   - 所有 template 中直接使用變數名稱（Vue 會自動 unwrap）
 */
 
-import { ref, computed } from 'vue'
+
+import { ref, computed, onMounted, defineOptions } from 'vue'
+import { useWordStore } from '@/stores/wordStore'
+import api from '@/axios.js'
+
+defineOptions({
+  name: 'UnfamiliarWordsArea'
+})
 
 /* ===== state（響應式資料） ===== */
 const newWord = ref('')               // 輸入框文字
@@ -109,15 +116,49 @@ const sortOption = ref('recent')      // 排序方式：'recent' or 'alphabetica
 const filterOption = ref('all')       // 篩選：'all','familiar','mistake','recent7'
 const viewMode = ref('list')          // 顯示模式：'list' / 'az'
 
+
+const store = useWordStore()
+
+
+onMounted(() => {
+  store.fetchWords();
+ // fetchMarkedWords();
+})
+/**
+ * 取得標記單字
+ * param {Object} options - 查詢選項
+ * param {number} options.article_id - 文章 ID
+ * param {string} options.marked_from - 起始日期，格式 'YYYY-MM-DD'
+ * param {string} options.marked_to - 結束日期，格式 'YYYY-MM-DD'
+ * param {number} options.limit - 限制筆數
+ */
+async function fetchMarkedWords(options = {}) {
+  try {
+    // 構造 query string，只加入有值的參數
+    const params = {}
+    if (options.article_id !== undefined) params.article_id = options.article_id
+    if (options.marked_from) params.marked_from = options.marked_from
+    if (options.marked_to) params.marked_to = options.marked_to
+    if (options.limit) params.limit = options.limit
+
+    const res = await api.get('/markedwords', { params })
+    wordList.value = res.data.words
+    console.log('取得單字列表:', wordList.value)
+  } catch (error) {
+    console.error('取得單字列表失敗:', error)
+  }
+}
+
 /* A-Z 的字母群 */
 const azGroups = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 /* 單字主資料陣列（建議每筆加上唯一 id，這裡為簡化用 text 當 key） */
-const wordList = ref([
-  { text: 'abandon', date: '2025-07-28', familiar: false, mistake: true, progress: 30 },
-  { text: 'bounce', date: '2025-07-25', familiar: true, mistake: false, progress: 100 },
-  { text: 'collapse', date: '2025-07-21', familiar: false, mistake: false, progress: 60 },
-])
+const wordList = computed(() => store.wordList)
+// const wordList = ref([
+//   // { id:'1',word: 'abandon', date: '2025-07-28', familiar: false, mistake: true, progress: 30 },
+//   // { id:'2',word: 'bounce', date: '2025-07-25', familiar: true, mistake: false, progress: 100 },
+//   // { id:'3',word: 'collapse', date: '2025-07-21', familiar: false, mistake: false, progress: 60 },
+// ])
 
 /* ===== computed: 根據搜尋 / 篩選 / 排序 產生要顯示的清單 ===== */
 const filteredWords = computed(() => {
@@ -127,7 +168,7 @@ const filteredWords = computed(() => {
   // --- 搜尋（不區分大小寫） ---
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase()
-    result = result.filter(w => w.text.toLowerCase().includes(q))
+    result = result.filter(w => w.word.toLowerCase().includes(q))
   }
 
   // --- 篩選 ---
@@ -152,7 +193,7 @@ const filteredWords = computed(() => {
   // --- 排序 ---
   if (sortOption.value === 'alphabetical') {
     // 字母排序（localCompare 支援多語系）
-    result.sort((a, b) => a.text.localeCompare(b.text))
+    result.sort((a, b) => a.word.localeCompare(b.word))
   } else {
     // recent：依日期從新到舊排序（注意：date 應為可解析的日期字串 yyyy-mm-dd）
     result.sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -181,9 +222,24 @@ function addWord() {
 }
 
 // 🔥 刪除字
-function deleteWord(wordText) {
-  wordList.value = wordList.value.filter(w => w.text !== wordText)
+async function deleteWord(id) {
+  store.deleteWordById(id)
 }
+
+// async function deleteMarkedWordById(id) {
+//   try {
+//     if (!id) throw new Error('請提供單字 id')
+
+//     // 呼叫後端 API
+//     const res = await api.delete(`/markedword/${id}`)
+//     console.log('刪除成功:', res.data)
+
+//     // 刪除後自動更新 wordList
+//     wordList.value = wordList.value.filter(word => word.id !== id)
+//   } catch (error) {
+//     console.error('刪除失敗:', error)
+//   }
+// }
 
 /*
   注意：

@@ -127,7 +127,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, reactive, nextTick  } from 'vue'
+import { ref, computed, onMounted, watch, reactive, nextTick,  defineOptions } from 'vue'
 import { useAuthStore } from '@/auth.js'
 
 import api from '@/axios.js'
@@ -135,7 +135,7 @@ import api from '@/axios.js'
 // import { parse } from '@babel/eslint-parser'
 /* global defineOptions */
 defineOptions({
-  name: 'articleReadingPage'
+  name: 'articleReading'
 })
 
 

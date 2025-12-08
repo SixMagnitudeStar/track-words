@@ -11,8 +11,15 @@
       <router-link to ="/personalSetting">個人設定</router-link> |
     </nav>
     <AppSideBar></AppSideBar>
-    
-    <router-view class="router-view"></router-view>
+
+    <keep-alive include="UnfamiliarWordsArea,articleReading,ELP">
+      <router-view class="router-view"></router-view>
+    </keep-alive>
+    <!-- <keep-alive>
+      <router-view class="router-view"></router-view>
+    </keep-alive> -->
+<!--     
+    <router-view class="router-view"></router-view> -->
   </div>
   <!-- <img alt="Vue logo" src="./assets/logo.png"> -->
   <!-- <HelloWorld msg="Welcome to Your Vue.js App"/> -->

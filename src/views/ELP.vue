@@ -127,10 +127,12 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, nextTick, reactive } from 'vue'
+import { ref, computed, onMounted, nextTick, reactive, defineOptions } from 'vue'
 //import { ref, reactive, computed, nextTick } from 'vue'
 import api from '@/axios.js'
-
+defineOptions({
+  name: 'ELP'
+})
 export default {
   setup() {
     const mode = ref(1)
