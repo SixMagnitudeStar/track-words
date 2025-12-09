@@ -17,7 +17,7 @@ console.log('jwtDecode:', jwtDecode) // 應為函數
 
 
 const routes = [
-  { path: '/', redirect: '/login' },
+  { path: '/', redirect: '/Home' },
   {
     path: '/home',
     name: 'Home',
