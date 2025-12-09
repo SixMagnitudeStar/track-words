@@ -736,7 +736,7 @@ async function AddMarkedWord(){
 async function markWord(block) {
 
 
-  alert(JSON.stringify(block));
+ // alert(JSON.stringify(block));
 
   // 只標記單字，標點符號、空白、其他字元等忽略
   if (block.text_type != 'word') return
@@ -746,7 +746,7 @@ async function markWord(block) {
 
   block.marked = mark;  // true → false, false → true
 
-  alert('到此');
+  //alert('到此');
   // 異動文章右側標記單字列表，將單字加入列表中/或從列表中移除
   if (mark){
     selectedArticle.value.marked_words.push({'word':block.text});
@@ -832,9 +832,9 @@ function selectArticle(index){
   //alert('檢查block: '+JSON.stringify(selectedArticle.value.blocks));
 
   // alert('id:'+selectedArticle.value.id+' 標題:'+selectedArticle.value.title);
-  alert('index:'+index);
-  alert(JSON.stringify(selectedArticle.value))
-  alert(JSON.stringify(articles[index]));
+  // alert('index:'+index);
+  // alert(JSON.stringify(selectedArticle.value))
+  // alert(JSON.stringify(articles[index]));
   
   // alert('marked words: '+JSON.stringify(selectedArticle.value.marked_words));
 

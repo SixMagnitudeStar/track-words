@@ -12,9 +12,11 @@
     </nav>
     <AppSideBar></AppSideBar>
 
-    <keep-alive include="UnfamiliarWordsArea,articleReading,ELP">
-      <router-view class="router-view"></router-view>
-    </keep-alive>
+     <!-- 路由出口加 transition -->
+    <transition name="zoom" mode="out-in">
+  <router-view class="router-view"></router-view>
+</transition>
+   
     <!-- <keep-alive>
       <router-view class="router-view"></router-view>
     </keep-alive> -->
@@ -166,5 +168,16 @@ body{
 }
 
 
+.zoom-enter-active, .zoom-leave-active {
+  transition: all 1.2s ease;
+}
+.zoom-enter-from {
+  transform: scale(0.6);
+  opacity: 0;
+}
+.zoom-leave-to {
+  transform: scale(1.4);
+  opacity: 0;
+}
 
 </style>
