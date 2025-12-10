@@ -1,4 +1,5 @@
 <template>
+  <p>I'm gemini</p>
 
   <div id="app">
     <nav>
