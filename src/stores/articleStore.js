@@ -297,19 +297,21 @@ export const useArticleStore = defineStore('articleStore', () => {
   }
   
   // --- 隨機文章 ---
-  async function fetchRandomArticle() {
+  async function fetchRandomArticle(topic, wordLimit = 500) {
     onloading.value = true;
     try {
-        const topic = encodeURIComponent('AI in education');
-        const wordLimit = 200;
-        const url = `http://127.0.0.1:8000/essay?topic=${topic}&word_limit=${wordLimit}`;
+        const encodedTopic = encodeURIComponent(topic);
+        const url = `http://127.0.0.1:8000/essay?topic=${encodedTopic}&word_limit=${wordLimit}`;
 
         const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error(`API call failed with status: ${res.status}`);
+        }
         const data = await res.json();
 
         const newArticle = {
             id: articles.length > 0 ? articles[0].id + 1 : 1,
-            title: data.topic || "無標題",
+            title: data.topic || topic || "無標題",
             content: data.essay || data.text || "",
             blocks: [],
             note: data.note || ""
@@ -321,7 +323,8 @@ export const useArticleStore = defineStore('articleStore', () => {
         isEditing.value = true;
 
     } catch (err) {
-        console.error(err);
+        console.error("生成隨機文章失敗:", err);
+        alert(`無法生成主題為 "${topic}" 的文章。請稍後再試。`);
     } finally {
         onloading.value = false;
     }

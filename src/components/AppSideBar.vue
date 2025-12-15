@@ -7,51 +7,18 @@
 
 
   <div id="container">
-
-
-
-
-
     <div id="toggle-sidebar-btn-wrapper" v-if="isLoggedIn">
-
-
       <img
-
-
         id="toggle-sidebar-btn"
-
-
         :src="toggleSideBarIcon"
-
-
         @click="() => { showPanel = !showPanel; switchToggleSideIcon(); }"
-
-
       />
-
-
     </div>
-
-
-
-
-
     <transition name="slide">
-
-
       <div v-if="showPanel" class="panel">
-
-
-
-
-
         <router-link to="/" class="router-link-custom">
-
-
           <span class="iconBox">
-
-
-            <img class="icon" :src="homeIcon" alt="首頁" />
+            <img class="icon" src="@/assets/house.png" alt="首頁" />
 
 
             <span>首頁</span>

@@ -27,7 +27,9 @@
   <!-- <img alt="Vue logo" src="./assets/logo.png"> -->
   <!-- <HelloWorld msg="Welcome to Your Vue.js App"/> -->
 
- 
+ <footer style="text-align:center; margin-top:40px; font-size:0.8rem; color:#666;">
+  <div>Home page icon made by <a href="https://www.flaticon.com/free-icon/house_845022?term=home&page=1&position=30&origin=tag&related_id=845022" target="_blank">Freepik</a> from Flaticon</div>
+</footer>
 </template>
 
 <script>

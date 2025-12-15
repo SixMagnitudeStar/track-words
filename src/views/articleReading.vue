@@ -9,7 +9,7 @@
         </div>
         
         <div class="tooltip">
-          <img @click="articleStore.fetchRandomArticle()" class="icon" src="../assets/random.png" alt="隨機生成文章" title="隨機生成文章">
+          <img @click="openTopicModal" class="icon" src="../assets/random.png" alt="隨機生成文章" title="隨機生成文章">
           <div class="tooltip-text">隨機一篇生成文章</div>
         </div>
         <div class="tooltip">
@@ -28,6 +28,34 @@
         @click="articleStore.selectArticle(index)"
         >{{ article.title  || '未命名文章' }}</li>
       </ul>
+    </div>
+
+    <!-- Topic Selection Modal -->
+    <div v-if="isTopicModalVisible" class="modal-overlay" @click.self="closeTopicModal">
+      <div class="modal-content">
+        <h3>選擇文章主題與字數</h3>
+        <div class="topic-buttons">
+          <button v-for="topic in predefinedTopics" :key="topic" @click="selectPredefinedTopic(topic)">
+            {{ topic }}
+          </button>
+        </div>
+        <div class="custom-topic">
+          <p>或輸入自訂主題：</p>
+          <input type="text" v-model="selectedTopic" placeholder="例如：Artificial Intelligence" @keyup.enter="handleGenerateArticle"/>
+        </div>
+        <div class="word-count-selector">
+            <label for="word-count">選擇文章字數：</label>
+            <select id="word-count" v-model="selectedWordCount">
+                <option v-for="count in wordCountOptions" :key="count" :value="count">
+                {{ count }} 字
+                </option>
+            </select>
+        </div>
+        <div class="modal-actions">
+          <button @click="handleGenerateArticle" :disabled="!selectedTopic.trim()">生成文章</button>
+          <button @click="closeTopicModal">取消</button>
+        </div>
+      </div>
     </div>
 
     <div class="article-content" >
@@ -137,6 +165,14 @@ const editableTitle = ref(null)
 const editorRef = ref(null)
 const noteArea = ref(null)
 
+// --- Topic Modal State ---
+const isTopicModalVisible = ref(false)
+const predefinedTopics = ref(['History', 'Health', 'Education', 'Lifestyle', 'Travel', 'Technology', 'Science', 'Finance', 'Sports'])
+const selectedTopic = ref('')
+const wordCountOptions = ref([500, 1000, 1500, 2000]);
+const selectedWordCount = ref(500);
+
+
 // --- Lifecycle Hooks ---
 onMounted(() => {
   // Load articles only if the list is empty
@@ -188,6 +224,30 @@ function handleCreateNewArticle() {
     editableTitle.value?.focus()
   })
 }
+
+// --- Topic Modal Methods ---
+function openTopicModal() {
+  selectedTopic.value = '';
+  selectedWordCount.value = 500;
+  isTopicModalVisible.value = true;
+}
+
+function closeTopicModal() {
+  isTopicModalVisible.value = false;
+}
+
+function selectPredefinedTopic(topic) {
+  selectedTopic.value = topic;
+}
+
+function handleGenerateArticle() {
+  if (!selectedTopic.value.trim()) {
+    return; // Or show an error message
+  }
+  articleStore.fetchRandomArticle(selectedTopic.value, selectedWordCount.value);
+  closeTopicModal();
+}
+
 
 // 判斷是不是文字
 function isWord(str) {
@@ -547,5 +607,125 @@ watch(isEditing, (editing) => {
   color: #2c3e50;
   font-weight: 600;
   font-family: "Segoe UI", Arial, sans-serif;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 500px;
+  text-align: center;
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.topic-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.topic-buttons button {
+  padding: 8px 15px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.topic-buttons button:hover {
+  background-color: #e0e0e0;
+}
+
+.topic-buttons button:focus, .topic-buttons button.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.custom-topic {
+  margin-bottom: 20px;
+}
+
+.custom-topic p {
+  margin: 0 0 8px;
+  color: #555;
+}
+
+.custom-topic input {
+  width: calc(100% - 20px);
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.word-count-selector {
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.word-count-selector label {
+    color: #555;
+}
+
+.word-count-selector select {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.modal-actions button {
+  padding: 10px 25px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.modal-actions button:first-child {
+  background-color: #007bff;
+  color: white;
+}
+
+.modal-actions button:first-child:disabled {
+  background-color: #a0a0a0;
+  cursor: not-allowed;
+}
+
+.modal-actions button:last-child {
+  background-color: #f44336;
+  color: white;
 }
 </style>

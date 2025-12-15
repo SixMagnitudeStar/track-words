@@ -1073,6 +1073,7 @@ function selectArticle(index){
 
 // 封裝 API 請求
 async function fetchTextFromAPI() {
+  alert('取ai')
   try {
     const topic = encodeURIComponent('AI in education')
     const wordLimit = 200
