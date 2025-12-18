@@ -8,6 +8,7 @@
       <router-link to="/">首頁</router-link> |
       <router-link to="/ELP">English Listening Practice</router-link> |
       <router-link to="/UnfamiliarWordsArea">不熟單字記錄區</router-link> |
+      <router-link to="/EnZhQuiz">英翻中測驗</router-link> |
       <router-link to="/articleReading">文章閱讀區</router-link> |
       <router-link to ="/personalSetting">個人設定</router-link> |
     </nav>

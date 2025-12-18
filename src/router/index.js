@@ -8,6 +8,7 @@ import articleReadingPage from '@/views/articleReading.vue'
 import personalSetting from '@/views/personalSetting.vue'
 import { useAuthStore } from '@/auth.js'
 import signUp from '@/views/signUp.vue'
+import EnZhQuiz from '@/views/EnZhQuiz.vue'
 //import jwtDecode from 'jwt-decode'
 
 //console.log('jwtDecode:', jwtDecode) // 調試：檢// 備用方案：嘗試顯式訪問 default
@@ -34,7 +35,8 @@ const routes = [
   },
   { path: '/signup', component: signUp},
     
-  { path: '/personalSetting', component: personalSetting}
+  { path: '/personalSetting', component: personalSetting},
+  { path: '/EnZhQuiz', component: EnZhQuiz}
   // 你可以在這裡加入更多頁面
 ]
 

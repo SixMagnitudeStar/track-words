@@ -27,12 +27,15 @@
         <option value="alphabetical">🔠 字母排序</option>
       </select>
 
-      <!-- 篩選選擇 (全部 / 已掌握 / 常錯 / 最近 7 天) -->
+      <!-- 篩選選擇 (全部 / 已掌握 / 常錯 / 日期) -->
       <select v-model="filterOption" class="filter-select">
         <option value="all">全部</option>
         <option value="familiar">✅ 已掌握</option>
         <option value="mistake">❌ 常錯</option>
+        <option value="today">🗓️ 今天</option>
         <option value="recent7">🗓️ 最近 7 天</option>
+        <option value="recent30">🗓️ 最近 30 天</option>
+        <option value="recent90">🗓️ 最近 90 天</option>
       </select>
 
       <!-- 切換顯示模式：列表 或 A-Z -->
@@ -55,7 +58,7 @@
       <div class="word-item" v-for="word in filteredWords" :key="word.word">
         <div class="word-main">
           <span class="word-text">{{ word.word }}</span>
-          <span class="date-added">📅 {{ word.date }}</span>
+          <span class="date-added">{{ formatDate(word.marked_time) }}</span>
         </div>
 
         <div class="word-tags">
@@ -105,6 +108,25 @@ import { ref, computed, onMounted, defineOptions } from 'vue'
 import { useWordStore } from '@/stores/wordStore'
 import api from '@/axios.js'
 
+function formatDate(isoString) {
+  if (!isoString) return ''
+  const date = new Date(isoString)
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  let hours = date.getHours()
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+
+  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+  const weekDay = weekdays[date.getDay()]
+
+  const ampm = hours >= 12 ? '下午' : '上午'
+  hours = hours % 12
+  hours = hours ? hours.toString().padStart(2, '0') : '12' // the hour '0' should be '12'
+
+  return `${year}年 ${month}月${day}日 ${weekDay} ${ampm}${hours}時${minutes}分`
+}
+
 defineOptions({
   name: 'UnfamiliarWordsArea'
 })
@@ -113,7 +135,7 @@ defineOptions({
 const newWord = ref('')               // 輸入框文字
 const searchQuery = ref('')           // 搜尋字串
 const sortOption = ref('recent')      // 排序方式：'recent' or 'alphabetical'
-const filterOption = ref('all')       // 篩選：'all','familiar','mistake','recent7'
+const filterOption = ref('all')       // 篩選：'all','familiar','mistake','today','recent7','recent30','recent90'
 const viewMode = ref('list')          // 顯示模式：'list' / 'az'
 
 
@@ -179,12 +201,29 @@ const filteredWords = computed(() => {
     case 'mistake':
       result = result.filter(w => w.mistake)
       break
-    case 'recent7':
-      // 計算七天前的時間，並比對 word.date（ISO 格式）
+    case 'today': {
+      const today = new Date().toISOString().split('T')[0]
+      result = result.filter(w => w.marked_time === today)
+      break
+    }
+    case 'recent7': {
       const seven = new Date()
       seven.setDate(seven.getDate() - 7)
-      result = result.filter(w => new Date(w.date) >= seven)
+      result = result.filter(w => new Date(w.marked_time) >= seven)
       break
+    }
+    case 'recent30': {
+      const thirty = new Date()
+      thirty.setDate(thirty.getDate() - 30)
+      result = result.filter(w => new Date(w.marked_time) >= thirty)
+      break
+    }
+    case 'recent90': {
+      const ninety = new Date()
+      ninety.setDate(ninety.getDate() - 90)
+      result = result.filter(w => new Date(w.marked_time) >= ninety)
+      break
+    }
     default:
       // 'all' 或其他未知值：不做額外篩選
       break
@@ -196,7 +235,7 @@ const filteredWords = computed(() => {
     result.sort((a, b) => a.word.localeCompare(b.word))
   } else {
     // recent：依日期從新到舊排序（注意：date 應為可解析的日期字串 yyyy-mm-dd）
-    result.sort((a, b) => new Date(b.date) - new Date(a.date))
+    result.sort((a, b) => new Date(b.marked_time) - new Date(a.marked_time))
   }
 
   return result
@@ -211,7 +250,7 @@ function addWord() {
   // 推入新物件到 wordList（若要更安全，建議加唯一 id，例如 timestamp 或 uuid）
   wordList.value.push({
     text,
-    date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+    marked_time: new Date().toISOString().split('T')[0], // YYYY-MM-DD
     familiar: false,
     mistake: false,
     progress: 0
@@ -375,6 +414,11 @@ async function deleteWord(id) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.date-added {
+  font-size: 0.85em; /* 稍微縮小字體 */
+  color: #666; /* 顏色可以稍微淡一點 */
 }
 
 .word-tags {
