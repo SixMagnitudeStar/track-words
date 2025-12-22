@@ -99,11 +99,19 @@
         <summary>不熟悉單字清單</summary>
         <div class="record-words-area">      
           <div class="input-bar">
-            <span  @click="toggleTranslation" class="translation-bar" >
-              <img src="../assets/translate.png" title="翻譯標記單字..">
-              <span>翻譯...</span>
-              <span class="checkmark" v-if="translated">✔</span>
-            </span>
+            <div class="translation-controls">
+              <span v-if="!isTranslating" @click="toggleTranslation" class="translation-bar" >
+                <img src="../assets/translate.png" title="翻譯標記單字..">
+                <span>翻譯...</span>
+                <span class="checkmark" v-if="translated">✔</span>
+              </span>
+              <span v-else class="translating-indicator">
+                翻譯中...
+              </span>
+              <button @click="showTranslations = !showTranslations" class="toggle-translation-btn" :disabled="!hasTranslations">
+                {{ showTranslations ? '關閉翻譯' : '顯示翻譯' }}
+              </button>
+            </div>
             <span class="parallel-div">
               <input v-model="inputWord" type="text" placeholder="Enter a word & phrase" @keyup.enter="handleAddMarkedWord"/>
               <button @click="handleAddMarkedWord">Add</button>
@@ -116,6 +124,9 @@
                 <div class="parallel-div">
                   <img @click="articleStore.deleteMarkedWord(word)" class="remove-marked-word-icon" src="../assets/bin2.png" alt="移除單字" title="移除單字">
                   <span>{{word.word}}</span>
+                  <span v-if="showTranslations && word.translation" class="translation-text">
+                    : {{ word.translation }}
+                  </span>
                 </div>
               </li>
             </ul>
@@ -157,6 +168,8 @@ const { articles, selectedIndex, selectedArticle, isEditing, onloading } = store
 
 // --- Local State & Refs ---
 const translated = ref(false)
+const showTranslations = ref(false)
+const isTranslating = ref(false)
 const inputWord = ref('')
 const noteSaveStatus = ref('')
 const saveTimer = ref(null)
@@ -164,6 +177,10 @@ const saveTimer = ref(null)
 const editableTitle = ref(null)
 const editorRef = ref(null)
 const noteArea = ref(null)
+
+const hasTranslations = computed(() => {
+  return selectedArticle.value.marked_words.some(word => word.translation && word.translation.trim() !== '');
+});
 
 // --- Topic Modal State ---
 const isTopicModalVisible = ref(false)
@@ -197,8 +214,18 @@ function syncRefsToStore() {
     }
 }
 
-function toggleTranslation() {
-  translated.value = !translated.value
+async function toggleTranslation() {
+  if (isTranslating.value) return; // Prevent multiple calls
+  isTranslating.value = true;
+  try {
+    const success = await articleStore.translateMarkedWords();
+    if (success) {
+      translated.value = true;
+      showTranslations.value = true;
+    }
+  } finally {
+    isTranslating.value = false;
+  }
 }
 
 // 將元件的 ref innerText 同步到 store
@@ -577,6 +604,14 @@ watch(isEditing, (editing) => {
   font-size: 20px;
 }
 
+.translating-indicator {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  color: #555;
+  font-style: italic;
+}
+
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -727,5 +762,34 @@ watch(isEditing, (editing) => {
 .modal-actions button:last-child {
   background-color: #f44336;
   color: white;
+}
+
+.translation-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-translation-btn {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+.toggle-translation-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.toggle-translation-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.translation-text {
+  margin-left: 8px;
+  color: #555;
+  font-style: italic;
 }
 </style>

@@ -275,98 +275,130 @@ export const useArticleStore = defineStore('articleStore', () => {
         } catch (err) {
             console.error('刪除 markedword 失敗:', err);
         }
-    }
-  }
-
-  // --- Note Actions ---
-  async function saveNote(note) {
-      const body = {
-          article_id: selectedArticle.value.id,
-          note: note
-      };
-      try {
-          const res = await api.patch('/article/note', body, { headers });
-          articles[selectedIndex.value].note = note;
-          selectedArticle.value.note = note;
-          console.log('✅ 筆記已儲存:', res.data);
-          return '✅ 已儲存';
-      } catch (err) {
-          console.error('❌ 筆記儲存失敗:', err);
-          return '❌ 儲存失敗';
-      }
-  }
-  
-  // --- 隨機文章 ---
-  async function fetchRandomArticle(topic, wordLimit = 500) {
-    onloading.value = true;
-    try {
-        const encodedTopic = encodeURIComponent(topic);
-        const url = `http://127.0.0.1:8000/essay?topic=${encodedTopic}&word_limit=${wordLimit}`;
-
-        const res = await fetch(url);
-        if (!res.ok) {
-          throw new Error(`API call failed with status: ${res.status}`);
         }
-        const data = await res.json();
-
-        const newArticle = {
-            id: articles.length > 0 ? articles[0].id + 1 : 1,
-            title: data.topic || topic || "無標題",
-            content: data.essay || data.text || "",
-            blocks: [],
-            note: data.note || ""
+      }
+    
+      async function translateMarkedWords() {
+        const wordsToTranslate = selectedArticle.value.marked_words;
+        if (!wordsToTranslate || wordsToTranslate.length === 0) {
+          console.log("No marked words to translate.");
+          return;
+        }
+    
+        const body = {
+          words: wordsToTranslate.map(w => ({ id: w.id, word: w.word }))
         };
+    
+        try {
+          const response = await api.post('/translate/batch-update', body, { headers });
+          const updatedWords = response.data;
+          
+          // Replace the old marked_words with the updated ones
+          selectedArticle.value.marked_words = updatedWords;
+          if (articles[selectedIndex.value]) {
+            articles[selectedIndex.value].marked_words = updatedWords;
+          }
+          
+          console.log('Translations updated successfully.');
+          return true; // Indicate success
+        } catch (err) {
+          console.error('Failed to translate marked words:', err.response?.data?.detail || err);
+          alert('翻譯失敗，請稍後再試。');
+          return false; // Indicate failure
+        }
+      }
+    
+    
+      // --- Note Actions ---
+      async function saveNote(note) {
+          const body = {
+              article_id: selectedArticle.value.id,
+              note: note
+          };
+          try {
+              const res = await api.patch('/article/note', body, { headers });
+              articles[selectedIndex.value].note = note;
+              selectedArticle.value.note = note;
+              console.log('✅ 筆記已儲存:', res.data);
+              return '✅ 已儲存';
+          } catch (err) {
+              console.error('❌ 筆記儲存失敗:', err);
+              return '❌ 儲存失敗';
+          }
+      }
+      
+      // --- 隨機文章 ---
+      async function fetchRandomArticle(topic, wordLimit = 500) {
+        onloading.value = true;
+        try {
+            const encodedTopic = encodeURIComponent(topic);
+            const url = `http://127.0.0.1:8000/essay?topic=${encodedTopic}&word_limit=${wordLimit}`;
+    
+            const res = await fetch(url);
+            if (!res.ok) {
+              throw new Error(`API call failed with status: ${res.status}`);
+            }
+            const data = await res.json();
+    
+            const newArticle = {
+                id: articles.length > 0 ? articles[0].id + 1 : 1,
+                title: data.topic || topic || "無標題",
+                content: data.essay || data.text || "",
+                blocks: [],
+                note: data.note || ""
+            };
+            
+            newArticleID_arr.push(newArticle.id);
+            articles.unshift(newArticle);
+            selectArticle(0);
+            isEditing.value = true;
+    
+        } catch (err) {
+            console.error("生成隨機文章失敗:", err);
+            alert(`無法生成主題為 "${topic}" 的文章。請稍後再試。`);
+        } finally {
+            onloading.value = false;
+        }
+      }
+    
+    
+      async function getMarkedWordsFromArticles(articleIds) {
+        console.log('Simulating fetching marked words for article IDs:', articleIds);
+        // Simulate API call by filtering local data
+        const words = articles
+          .filter(article => articleIds.includes(article.id))
+          .flatMap(article => article.marked_words || []);
         
-        newArticleID_arr.push(newArticle.id);
-        articles.unshift(newArticle);
-        selectArticle(0);
-        isEditing.value = true;
-
-    } catch (err) {
-        console.error("生成隨機文章失敗:", err);
-        alert(`無法生成主題為 "${topic}" 的文章。請稍後再試。`);
-    } finally {
-        onloading.value = false;
-    }
-  }
-
-
-  async function getMarkedWordsFromArticles(articleIds) {
-    console.log('Simulating fetching marked words for article IDs:', articleIds);
-    // Simulate API call by filtering local data
-    const words = articles
-      .filter(article => articleIds.includes(article.id))
-      .flatMap(article => article.marked_words || []);
+        // Remove duplicates
+        const uniqueWords = [...new Set(words.map(w => w.word))];
+        
+        console.log('Found unique words:', uniqueWords);
+        return uniqueWords.map(word => ({ word })); // Return in a consistent format
+      }
     
-    // Remove duplicates
-    const uniqueWords = [...new Set(words.map(w => w.word))];
     
-    console.log('Found unique words:', uniqueWords);
-    return uniqueWords.map(word => ({ word })); // Return in a consistent format
-  }
-
-
-  return {
-    // State
-    articles,
-    selectedIndex,
-    selectedArticle,
-    isEditing,
-    onloading,
-    
-    // Actions
-    loadArticles,
-    selectArticle,
-    createNewArticle,
-    saveArticle,
-    deleteArticle,
-    updateArticleContent,
-    updateArticleTitle,
-    addMarkedWord,
-    deleteMarkedWord,
-    toggleBlockMark,
-    saveNote,
-    fetchRandomArticle,
-    getMarkedWordsFromArticles
-  }
-})
+      return {
+        // State
+        articles,
+        selectedIndex,
+        selectedArticle,
+        isEditing,
+        onloading,
+        
+        // Actions
+        loadArticles,
+        selectArticle,
+        createNewArticle,
+        saveArticle,
+        deleteArticle,
+        updateArticleContent,
+        updateArticleTitle,
+        addMarkedWord,
+        deleteMarkedWord,
+        toggleBlockMark,
+        saveNote,
+        fetchRandomArticle,
+        getMarkedWordsFromArticles,
+        translateMarkedWords,
+      }
+    })
