@@ -1,8 +1,8 @@
 <template>
-  <p>I'm gemini</p>
+  <!-- <p>I'm gemini</p> -->
 
   <div id="app">
-    <nav>
+    <!-- <nav>
       <router-link to="/login">登入</router-link> |
       <router-link to="/signup">註冊</router-link> |
       <router-link to="/">首頁</router-link> |
@@ -11,8 +11,8 @@
       <router-link to="/EnZhQuiz">英翻中測驗</router-link> |
       <router-link to="/articleReading">文章閱讀區</router-link> |
       <router-link to ="/personalSetting">個人設定</router-link> |
-    </nav>
-    <AppSideBar></AppSideBar>
+    </nav> -->
+    <AppSideBar v-if="isLoggedIn"></AppSideBar>
 
      <!-- 路由出口加 transition -->
     <transition name="zoom" mode="out-in">
@@ -28,27 +28,16 @@
   <!-- <img alt="Vue logo" src="./assets/logo.png"> -->
   <!-- <HelloWorld msg="Welcome to Your Vue.js App"/> -->
 
- <footer style="text-align:center; margin-top:40px; font-size:0.8rem; color:#666;">
-  <div>Home page icon made by <a href="https://www.flaticon.com/free-icon/house_845022?term=home&page=1&position=30&origin=tag&related_id=845022" target="_blank">Freepik</a> from Flaticon</div>
-</footer>
+ 
 </template>
 
-<script>
-// import HelloWorld from './components/HelloWorld.vue'
-
+<script setup>
 import AppSideBar from '@/components/AppSideBar.vue'
+import { useAuthStore } from './auth.js'
+import { storeToRefs } from 'pinia'
 
-export default {
-  name: 'App',
-  components: {
-    AppSideBar
-    // HelloWorld
-  },
-  data(){
-    return {
-    }
-  }
-}
+const authStore = useAuthStore()
+const { isLoggedIn } = storeToRefs(authStore)
 </script>
 
 <style>
@@ -79,7 +68,6 @@ body{
   background-attachment: fixed; /* 背景固定，不隨滾動拉伸 */
   background-position: center center; /* 居中顯示 */
 }
-
 
 
 
@@ -165,6 +153,7 @@ body{
   padding: 20px;
   border-radius: 5px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
 }
 
 .parallel-div{

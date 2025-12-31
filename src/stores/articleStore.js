@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia'
 import api from '@/axios.js'
 import { useAuthStore } from '@/auth.js'
-import { ref, reactive, nextTick } from 'vue'
+import { ref, reactive } from 'vue'
 
 export const useArticleStore = defineStore('articleStore', () => {
   const auth = useAuthStore()

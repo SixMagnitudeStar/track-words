@@ -106,7 +106,7 @@
 
 import { ref, computed, onMounted, defineOptions } from 'vue'
 import { useWordStore } from '@/stores/wordStore'
-import api from '@/axios.js'
+//import api from '@/axios.js'
 
 function formatDate(isoString) {
   if (!isoString) return ''
@@ -154,22 +154,22 @@ onMounted(() => {
  * param {string} options.marked_to - 結束日期，格式 'YYYY-MM-DD'
  * param {number} options.limit - 限制筆數
  */
-async function fetchMarkedWords(options = {}) {
-  try {
-    // 構造 query string，只加入有值的參數
-    const params = {}
-    if (options.article_id !== undefined) params.article_id = options.article_id
-    if (options.marked_from) params.marked_from = options.marked_from
-    if (options.marked_to) params.marked_to = options.marked_to
-    if (options.limit) params.limit = options.limit
+// async function fetchMarkedWords(options = {}) {
+//   try {
+//     // 構造 query string，只加入有值的參數
+//     const params = {}
+//     if (options.article_id !== undefined) params.article_id = options.article_id
+//     if (options.marked_from) params.marked_from = options.marked_from
+//     if (options.marked_to) params.marked_to = options.marked_to
+//     if (options.limit) params.limit = options.limit
 
-    const res = await api.get('/markedwords', { params })
-    wordList.value = res.data.words
-    console.log('取得單字列表:', wordList.value)
-  } catch (error) {
-    console.error('取得單字列表失敗:', error)
-  }
-}
+//     const res = await api.get('/markedwords', { params })
+//     wordList.value = res.data.words
+//     console.log('取得單字列表:', wordList.value)
+//   } catch (error) {
+//     console.error('取得單字列表失敗:', error)
+//   }
+// }
 
 /* A-Z 的字母群 */
 const azGroups = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')

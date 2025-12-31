@@ -7,7 +7,7 @@
 
 
   <div id="container">
-    <div id="toggle-sidebar-btn-wrapper" v-if="isLoggedIn">
+    <div id="toggle-sidebar-btn-wrapper">
       <img
         id="toggle-sidebar-btn"
         :src="toggleSideBarIcon"
@@ -19,43 +19,38 @@
         <router-link to="/" class="router-link-custom">
           <span class="iconBox">
             <img class="icon" src="@/assets/house.png" alt="首頁" />
-
-
             <span>首頁</span>
-
-
           </span>
-
-
         </router-link>
-
-
-
-
-
+        <div class="indented-links">
+          <router-link to="/articleReading" class="router-link-custom">
+            <span class="iconBox">
+              <img class="icon" src="@/assets/open-book.png" alt="文章閱讀區" />
+              <span>文章閱讀</span>
+            </span>
+          </router-link>
+          <router-link to="/ELP" class="router-link-custom">
+            <span class="iconBox">
+              <img class="icon" src="@/assets/listening.png" alt="聽力練習" />
+              <span>聽力練習</span>
+            </span>
+          </router-link>
+          <router-link to="/UnfamiliarWordsArea" class="router-link-custom">
+            <span class="iconBox">
+              <img class="icon" src="@/assets/flash-card.png" alt="不熟單字區" />
+              <span>不熟單字</span>
+            </span>
+          </router-link>
+        </div>
         <span class="iconBox logoutBox" @click="logout">
-
-
           <img class="icon" src="../assets/logout.png" alt="登出" />
-
-
           <span>登出</span>
-
-
         </span>
-
-
-
-
-
+        <footer style="text-align:center; margin-top:40px; font-size:0.8rem; color:#666;">
+          <div>Home page icon made by <a href="https://www.flaticon.com/free-icon/house_845022?term=home&page=1&position=30&origin=tag&related_id=845022" target="_blank">Freepik</a> from Flaticon</div>
+        </footer>
       </div>
-
-
     </transition>
-
-
-
-
 
   </div>
 
@@ -69,14 +64,12 @@
 <script setup>
 
 
-import { ref, computed } from 'vue'
+import { ref} from 'vue'
 
 
 import api from '@/axios.js'
 
-
 import { useAuthStore } from '@/auth.js'
-
 
 import { useRouter } from 'vue-router'
 
@@ -87,10 +80,10 @@ import { useRouter } from 'vue-router'
 // ---------- state ----------
 
 
-const newItem = ref('')
+// const newItem = ref('')
 
 
-const items = ref([])
+// const items = ref([])
 
 
 const showPanel = ref(false)
@@ -102,7 +95,7 @@ const showPanel = ref(false)
 const toggleSideBarIcon = ref(require('../assets/angle-double-left.png'))
 
 
-const homeIcon = ref('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzNjM2MzYyIgd2lkdGg9IjI0cHgiIGhlaWnaHQ9IjI0cHgiPjxwYXRoIGQ9Ik0xMiA1LjY5TDE3IDEwLjE5VjE4aC0ydj02SDl2Nkg3di03LjgxTDEyIDUuNjlNMTIgM0wyIDEySDd2OGg2di02aDJ2Nmg2di04aDNMMTIgM3oiLz48L3N2Zz4=')
+// const homeIcon = ref('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzNjM2MzYyIgd2lkdGg9IjI0cHgiIGhlaWnaHQ9IjI0cHgiPjxwYXRoIGQ9Ik0xMiA1LjY5TDE3IDEwLjE5VjE4aC0ydj02SDl2Nkg3di03LjgxTDEyIDUuNjlNMTIgM0wyIDEySDd2OGg2di02aDJ2Nmg2di04aDNMMTIgM3oiLz48L3N2Zz4=')
 
 
 
@@ -114,7 +107,7 @@ const homeIcon = ref('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53
 const auth = useAuthStore()
 
 
-const isLoggedIn = computed(() => auth.isLoggedIn)
+// const isLoggedIn = computed(() => auth.isLoggedIn)
 
 
 const router = useRouter()
@@ -147,33 +140,29 @@ function switchToggleSideIcon() {
 
 
 
+// async function logout() {
+
+
+//   try {
+//     await api.post('/logout')
+//     auth.clearToken()
+//     router.push('/login')
+//   } catch (err) {
+//     console.error(err)
+//   }
+// }
 async function logout() {
-
-
   try {
-
-
+    // 即使後端噴錯，也要繼續執行後續動作
     await api.post('/logout')
-
-
-    auth.clearToken()
-
-
-    router.push('/login')
-
-
   } catch (err) {
-
-
-    console.error(err)
-
-
+    console.error('後端登出失敗，但仍將強制清除本地狀態:', err)
+  } finally {
+    // 放在 finally 確保無論如何都會執行
+    auth.clearToken()
+    router.push('/login')
   }
-
-
 }
-
-
 </script>
 
 
@@ -447,13 +436,109 @@ async function logout() {
 .router-link-custom {
 
 
+
+
+
   text-decoration: none;
+
+
+
 
 
   color: inherit;
 
 
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+.indented-links {
+
+
+
+
+
+  padding-left: 20px;
+
+
+
+
+
+  margin-left: 10px;
+
+
+
+
+
+  border-left: 2px solid #ccc;
+
+
+
+
+
+  padding-top: 10px;
+
+
+
+
+
+  margin-top: 5px;
+
+
+
+
+
+  display: flex;
+
+
+
+
+
+  flex-direction: column;
+
+
+
+
+
+  gap: 10px;
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

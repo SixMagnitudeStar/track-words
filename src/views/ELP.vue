@@ -150,7 +150,7 @@ export default {
     const mode = ref(1)
     const vocabLists = ref([])
     const showAllLists = ref(false)
-    const nextVocabListId = ref(1)
+   // const nextVocabListId = ref(1)
     const listNameRefs = ref([])
 
     // Modal state

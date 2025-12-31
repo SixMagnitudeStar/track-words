@@ -46,45 +46,53 @@ const router = createRouter({
 })
 
 
-// // 全域路由守衛
+
+
+// 全域路由守衛
 router.beforeEach((to, from, next) => {
- const auth = useAuthStore()
- const token = auth.token || localStorage.getItem('token') // 從 pinia 或 localStorage 拿 token
-// const token = localStorage.getItem('token') 
+  const auth = useAuthStore()
+  const token = auth.token || localStorage.getItem('token')
 
- // 檢查token是否過期
-  if (token) {
-    try {
-      const { exp } = jwtDecode(token)
+  // 1. 定義「不需要登入」的白名單頁面 (使用路徑或是 Name)
+  const whiteList = ['/login', '/signup']
+  const isWhiteList = whiteList.includes(to.path)
 
-      if (Date.now() > exp * 1000) {
-        auth.clearToken()           // ← 一定要加 ()
-        localStorage.removeItem('token')
-        return next('/login')
-      }
-    } catch (e) {
+  // 2. 如果要去的是白名單頁面，直接放行
+  if (isWhiteList) {
+    return next()
+  }
+
+  // 3. 如果不是白名單，檢查是否有 Token
+  if (!token) {
+    // 沒 Token 且不在白名單 -> 強制回登入頁
+    return next('/login')
+  }
+
+  // 4. 有 Token，驗證是否過期
+  try {
+    const decoded = jwtDecode(token)
+    const currentTime = Date.now() / 1000
+
+    if (decoded.exp < currentTime) {
+      // 已過期
+      alert('登入已過期，請重新登入')
       auth.clearToken()
-      localStorage.removeItem('token')
       return next('/login')
     }
-  }
-  // }else {
-  //   // 沒 token
-  //   if (to.meta.requiresAuth) {
-  //     return next('/login')
-  //   } else {
-  //     return next()
-  //   }
-  // }
 
-  if (to.meta.requiresAuth && !token) {
-    // 沒有登入，跳回 login
+    // 5. Token 有效，確保 Store 裡面的 token 是同步的
+    if (!auth.token) {
+      auth.token = token 
+    }
+    
+    next() // 驗證通過，放行
+  } catch (error) {
+    // Token 解析失敗 (可能是亂碼或偽造)
+    console.error('Invalid Token', error)
+    auth.clearToken()
     next('/login')
-  } else {
-    next()
   }
 })
-
 
 
 export default router

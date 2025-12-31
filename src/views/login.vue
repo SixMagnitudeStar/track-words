@@ -20,27 +20,15 @@ export default {
 <script setup>
 import { ref } from 'vue'
 import { useAuthStore } from '@/auth.js'
-// import axios from 'axios'
 import { useRouter } from 'vue-router'  // <-- 匯入 router
-
 import api from '@/axios.js'
-
-
-// import { defineOptions } from 'vue'
-
-
-// defineOptions({
-//   name: 'loginView'
-// })
-
-// alert(process.env.VUE_APP_API_BASE);
 
 
 const username = ref('')
 const password = ref('')
 
-username.value='plaisir963'
-password.value='yuizxc789'
+// username.value='plaisir963'
+// password.value='yuizxc789'
 
 const error = ref('')
 
@@ -48,7 +36,7 @@ const auth = useAuthStore()
 const router = useRouter()  // <-- 取得 router 實例
 
 async function login() {
-  alert(process.env.VUE_APP_API_BASE);
+  // alert(process.env.VUE_APP_API_BASE);
   try {
     const response = await api.post('/login', {
       username: username.value,
@@ -57,10 +45,10 @@ async function login() {
     auth.setToken(response.data.access_token)
     localStorage.setItem('token', response.data.access_token)   // 存到 localStorage
     error.value = ''
-    console.log('chk'+JSON.stringify(response.data))
+    // console.log('chk'+JSON.stringify(response.data))
    // router.push('/articleReading')
-    alert('跳轉')
-    router.push({ name: 'articleReading' })
+
+    router.push({ name: 'Home' })
   } catch (err) {
     console.error(err)
     error.value = 'Login failed'

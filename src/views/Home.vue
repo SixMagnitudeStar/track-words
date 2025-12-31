@@ -78,32 +78,9 @@ export default {
 
 <template>
   <div class="min-h-screen bg-gray-100 p-8">
-    <h1 class="text-4xl font-bold text-center mb-12">Welcome to Home Page</h1>
+    <!-- <h1 class="text-4xl font-bold text-center mb-12">Welcome to Home Page</h1> -->
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- <router-link
-        to="/login"
-        class="home-card bg-white shadow-md rounded-lg p-8 flex flex-col items-center justify-center hover:scale-105 transition transform duration-200"
-      >
-        <img src="@/assets/login-icon.png" alt="Login" class="w-16 h-16 mb-4"/>
-        <span class="text-xl font-semibold">登入</span>
-      </router-link>
-
-      <router-link
-        to="/signup"
-        class="home-card bg-white shadow-md rounded-lg p-8 flex flex-col items-center justify-center hover:scale-105 transition transform duration-200"
-      >
-        <img src="@/assets/signup-icon.png" alt="Signup" class="w-16 h-16 mb-4"/>
-        <span class="text-xl font-semibold">註冊</span>
-      </router-link>
-
-      <router-link
-        to="/"
-        class="home-card bg-white shadow-md rounded-lg p-8 flex flex-col items-center justify-center hover:scale-105 transition transform duration-200"
-      >
-        <img src="@/assets/home-icon.png" alt="Home" class="w-16 h-16 mb-4"/>
-        <span class="text-xl font-semibold">首頁</span>
-      </router-link> -->
 
       <router-link
         to="/articleReading"
@@ -128,17 +105,7 @@ export default {
         <span class="text-xl font-semibold">English Listening Practice</span>
       </router-link>
 
-  
 
-      
-
-      <!-- <router-link
-        to="/personalSetting"
-        class="home-card bg-white shadow-md rounded-lg p-8 flex flex-col items-center justify-center hover:scale-105 transition transform duration-200"
-      >
-        <img src="@/assets/settings-icon.png" alt="Settings" class="w-16 h-16 mb-4"/>
-        <span class="text-xl font-semibold">個人設定</span>
-      </router-link> -->
     </div>
   </div>
 
@@ -195,6 +162,8 @@ export default {
   font-size: 1.2rem;
   font-weight: 600;
   transition: transform 0.2s, box-shadow 0.2s;
+  width: 40vw
+
 }
 
 /* hover 動畫 */
