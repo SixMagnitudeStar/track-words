@@ -121,6 +121,7 @@ export default {
   <div>Open book icon made by <a href="https://www.flaticon.com/free-icon/open-book_167755" target="_blank">Freepik</a> from Flaticon</div>
   <div>Flash-card icon made by <a href="https://www.flaticon.com/free-icon/flash-card_6727586" target="_blank">Freepik</a> from Flaticon</div>
   <div>Listening icon made by <a href="https://www.flaticon.com/free-icon/listening_5295066" target="_blank">Freepik</a> from Flaticon</div>
+  <div>English-Chinese quiz icon made by <a href="https://www.flaticon.com/free-icon/test_xxxxxx" target="_blank">Freepik</a> from Flaticon</div>
 </footer>
   
 </template>
