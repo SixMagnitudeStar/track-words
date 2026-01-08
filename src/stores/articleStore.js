@@ -284,7 +284,8 @@ export const useArticleStore = defineStore('articleStore', () => {
           console.log("No marked words to translate.");
           return;
         }
-    
+        alert('翻譯:' + JSON.stringify(selectedArticle.value.marked_words));
+        console.log('Translating marked words:', wordsToTranslate);
         const body = {
           words: wordsToTranslate.map(w => ({ id: w.id, word: w.word }))
         };

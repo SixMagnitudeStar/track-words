@@ -41,6 +41,12 @@
               <span>不熟單字</span>
             </span>
           </router-link>
+          <router-link to="/EnZhQuiz" class="router-link-custom">
+            <span class="iconBox">
+              <img class="icon" src="@/assets/test.png" alt="中英測驗" />
+              <span>中英測驗</span>
+            </span>
+          </router-link>
         </div>
         <span class="iconBox logoutBox" @click="logout">
           <img class="icon" src="../assets/logout.png" alt="登出" />

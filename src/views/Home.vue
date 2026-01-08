@@ -105,6 +105,14 @@ export default {
         <span class="text-xl font-semibold">English Listening Practice</span>
       </router-link>
 
+      <router-link
+        to="/EnZhQuiz"
+        class="home-card bg-white shadow-md rounded-lg p-8 flex flex-col items-center justify-center hover:scale-105 transition transform duration-200"
+      >
+        <img src="@/assets/test.png" alt="EnZhQuiz" class="w-16 h-16 mb-4"/>
+        <span class="text-xl font-semibold">中英測驗</span>
+      </router-link>
+
 
     </div>
   </div>

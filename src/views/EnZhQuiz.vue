@@ -72,6 +72,7 @@ const startQuiz = async () => {
     }
 
     alert(JSON.stringify(response))
+    console.log("獲取測驗題目:", JSON.stringify(response));
     
     // Map API response to the structure needed by the frontend
     quizQuestions.value = response.data.map(q => ({
