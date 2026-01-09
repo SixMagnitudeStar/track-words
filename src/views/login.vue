@@ -7,7 +7,8 @@
         <!-- <button type="submit" @click="login">Login</button> -->
         <button type="button" @click="login">Login</button>
         <p v-if="error" style="color:red">{{ error }}</p>
-    <!-- </form> -->
+        <p>Don't have an account? <router-link to="/signup">Sign Up</router-link></p>
+    <!-- </form> --> -->
     </div>
 </template>
 
