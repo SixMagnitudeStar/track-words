@@ -1,17 +1,22 @@
 <template>
-  <div style="padding: 30px; font-family: Arial;">
-    <h2>Email 驗證流程</h2>
+  <div class="login-container">
+    <h2>註冊新帳號</h2>
 
-    <!-- 步驟 1：輸入 Email -->
+    <!-- 步驟 1：輸入 Email 和密碼 -->
     <div v-if="step === 1">
       <input
         v-model="email"
         type="email"
         placeholder="請輸入 Email"
-        style="padding:8px; width:250px;"
+        required
       />
-      <br />
-      <button @click="sendCode" style="padding:8px; margin-top:5px;">取得驗證碼</button>
+      <input
+        v-model="password"
+        type="password"
+        placeholder="請輸入密碼"
+        required
+      />
+      <button @click="register">註冊</button>
     </div>
 
     <!-- 步驟 2：輸入驗證碼 -->
@@ -40,12 +45,13 @@
         />
       </div>
 
-      <button @click="verifyCode" style="padding:8px; margin-top:15px;">驗證</button>
+      <button @click="verifyCode">驗證</button>
     </div>
 
     <!-- 驗證成功 -->
     <div v-if="step === 3">
-      <p style="color:green;">驗證成功！🎉</p>
+      <p style="color:green;">註冊成功！🎉</p>
+      <router-link to="/login">回到登入頁面</router-link>
     </div>
   </div>
 </template>
@@ -55,17 +61,19 @@ import { ref, nextTick } from "vue";
 
 const step = ref(1);
 const email = ref("");
+const password = ref("");
 const codeInputs = ref(["", "", "", "", "", ""]);
 const codeRefs = ref([]);
 let verificationCode = "";
 
-function sendCode() {
-  if (!email.value) {
-    alert("請輸入 Email");
+function register() {
+  if (!email.value || !password.value) {
+    alert("請輸入 Email 和密碼");
     return;
   }
 
-  // 模擬寄送驗證碼
+  // 模擬註冊並寄送驗證碼
+  console.log(`註冊帳號: ${email.value}, 密碼: ${password.value}`);
   verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   alert(`模擬寄信: 驗證碼為 ${verificationCode}`);
   step.value = 2;
@@ -131,32 +139,36 @@ function verifyCode() {
   const enteredCode = codeInputs.value.join("");
   if (enteredCode === verificationCode) {
     step.value = 3;
+    // 這裡可以加入實際的註冊 API 呼叫
+    console.log("驗證成功，註冊完成！");
   } else {
     alert("驗證碼錯誤");
   }
 }
 </script>
 
-<style>
-.code-container {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin: 10px 0;
+<style scoped>
+.login-container {
+  padding: 30px;
+  font-family: Arial;
 }
 
-.code-box {
-  width: 40px;
-  height: 45px;
-  text-align: center;
-  font-size: 20px;
+.login-container input {
+  width: 95%;
+  padding: 10px;
+  margin-bottom: 10px;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: 8px; /* 更圓潤 */
+  box-sizing: border-box;
+  background-color: rgba(255, 255, 255, 0.9); /* 半透明質感 */
 }
 
-.code-box:focus {
-  border-color: #4CAF50;
-  outline: none;
-  box-shadow: 0 0 4px #4CAF50;
+.login-container button {
+  background-color: rgba(76, 175, 80, 0.8); /* 半透明綠色 */
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 8px; /* 更圓潤 */
+  cursor: pointer;
 }
 </style>
