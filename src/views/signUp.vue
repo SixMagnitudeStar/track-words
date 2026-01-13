@@ -11,6 +11,12 @@
         required
       />
       <input
+        v-model="nickname"
+        type="text"
+        placeholder="請輸入暱稱"
+        required
+      />
+      <input
         v-model="password"
         type="password"
         placeholder="請輸入密碼"
@@ -58,30 +64,40 @@
 
 <script setup>
 import { ref, nextTick } from "vue";
+import api from "@/axios";
 
 const step = ref(1);
 const email = ref("");
 const password = ref("");
+const nickname = ref(""); // 新增 nickname
 const codeInputs = ref(["", "", "", "", "", ""]);
 const codeRefs = ref([]);
-let verificationCode = "";
 
-function register() {
-  if (!email.value || !password.value) {
-    alert("請輸入 Email 和密碼");
+async function register() {
+  if (!email.value || !password.value || !nickname.value) {
+    alert("請輸入 Email、暱稱和密碼");
     return;
   }
 
-  // 模擬註冊並寄送驗證碼
-  console.log(`註冊帳號: ${email.value}, 密碼: ${password.value}`);
-  verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  alert(`模擬寄信: 驗證碼為 ${verificationCode}`);
-  step.value = 2;
+  try {
+    const response = await api.post("/register", {
+      email: email.value,
+      password: password.value,
+      nickname: nickname.value,
+    });
+    
+    console.log(response.data.message)
+    alert("註冊請求已送出，請檢查您的電子郵件以取得驗證碼。");
+    step.value = 2;
 
-  // 自動聚焦第一格
-  nextTick(() => {
-    codeRefs.value[0]?.focus();
-  });
+    // 自動聚焦第一格
+    nextTick(() => {
+      codeRefs.value[0]?.focus();
+    });
+  } catch (error) {
+    console.error("註冊失敗:", error.response ? error.response.data : error.message);
+    alert(`註冊失敗：${error.response?.data?.detail || '發生未知錯誤'}`);
+  }
 }
 
 function handleInput(index, event) {
@@ -101,6 +117,7 @@ function handleKeydown(index, event) {
   // ← 左移
   if (key === "ArrowLeft" && index > 0) {
     event.preventDefault();
+
     codeRefs.value[index - 1]?.focus();
     return;
   }
@@ -135,14 +152,25 @@ function handleKeydown(index, event) {
   }
 }
 
-function verifyCode() {
+async function verifyCode() {
   const enteredCode = codeInputs.value.join("");
-  if (enteredCode === verificationCode) {
+  if (enteredCode.length !== 6) {
+    alert("請輸入完整的 6 位數驗證碼。");
+    return;
+  }
+
+  try {
+    const response = await api.post("/verify-email", {
+      email: email.value,
+      code: enteredCode,
+    });
+    
+    console.log(response.data.message);
+    alert("電子郵件驗證成功！您現在可以登入。");
     step.value = 3;
-    // 這裡可以加入實際的註冊 API 呼叫
-    console.log("驗證成功，註冊完成！");
-  } else {
-    alert("驗證碼錯誤");
+  } catch (error) {
+    console.error("驗證失敗:", error.response ? error.response.data : error.message);
+    alert(`驗證失敗：${error.response?.data?.detail || '發生未知錯誤'}`);
   }
 }
 </script>
