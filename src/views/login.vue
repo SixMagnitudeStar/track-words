@@ -2,7 +2,7 @@
     <div class="login-container">
     <h1>Login</h1>
     <!-- <form> -->
-        <input type="text" placeholder="Username" v-model="username" required >
+        <input type="email" placeholder="Email" v-model="email" required >
         <input type="password" placeholder="Password"  v-model="password" required>
         <!-- <button type="submit" @click="login">Login</button> -->
         <button type="button" @click="login">Login</button>
@@ -25,10 +25,10 @@ import { useRouter } from 'vue-router'  // <-- 匯入 router
 import api from '@/axios.js'
 
 
-const username = ref('')
+const email = ref('')
 const password = ref('')
 
-// username.value='plaisir963'
+// email.value='plaisir963@gmail.com'
 // password.value='yuizxc789'
 
 const error = ref('')
@@ -40,7 +40,7 @@ async function login() {
   // alert(process.env.VUE_APP_API_BASE);
   try {
     const response = await api.post('/login', {
-      username: username.value,
+      email: email.value,
       password: password.value
     })
     auth.setToken(response.data.access_token)
