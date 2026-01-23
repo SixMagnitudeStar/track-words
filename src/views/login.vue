@@ -34,10 +34,6 @@ const email = ref('')
 const password = ref('')
 const isLoading = ref(false)
 
-
-// email.value='plaisir963@gmail.com'
-// password.value='yuizxc789'
-
 const error = ref('')
 
 const auth = useAuthStore()
