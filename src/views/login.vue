@@ -32,6 +32,7 @@ import api from '@/axios.js'
 
 const email = ref('')
 const password = ref('')
+const isLoading = ref(false)
 
 const error = ref('')
 
