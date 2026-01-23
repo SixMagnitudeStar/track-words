@@ -59,6 +59,9 @@
     </div>
 
     <div class="article-content" >
+      <div class="article-info-bar">
+        <span>已標記單字: {{ markedWordsCount }}</span>
+      </div>
       <h1 class="article-title"
           :contenteditable="isEditing" 
           placeholder="請輸入標題"
@@ -72,6 +75,7 @@
           <div class="loading-text">載入中...</div>
       </div>
       <div v-if="isEditing" 
+        v-show="!onloading"
         class="article-editor" 
         contenteditable="true"
         @input="onContentInput"
@@ -182,6 +186,11 @@ const hasTranslations = computed(() => {
   return selectedArticle.value.marked_words.some(word => word.translation && word.translation.trim() !== '');
 });
 
+const markedWordsCount = computed(() => {
+  return selectedArticle.value?.marked_words?.length || 0;
+});
+
+
 // --- Topic Modal State ---
 const isTopicModalVisible = ref(false)
 const predefinedTopics = ref(['History', 'Health', 'Education', 'Lifestyle', 'Travel', 'Technology', 'Science', 'Finance', 'Sports'])
@@ -254,6 +263,8 @@ function handleCreateNewArticle() {
 
 // --- Topic Modal Methods ---
 function openTopicModal() {
+
+  if (articleStore.onloading) return;
   selectedTopic.value = '';
   selectedWordCount.value = 500;
   isTopicModalVisible.value = true;
@@ -340,6 +351,8 @@ const parseArticleText = computed(() => {
 })
 
 async function handleSaveArticle() {
+  if (articleStore.onloading) return;
+
   let blocksToSave = null;
   if (isEditing.value && editorRef.value) {
     blocksToSave = parseArticleText.value;
@@ -437,7 +450,7 @@ watch(isEditing, (editing) => {
 }
 
 .article-editor{
-    width: 50vw;
+    width: 49vw;
     text-align: left;
     font-size: 24px;
     margin: 30px;
@@ -449,6 +462,16 @@ watch(isEditing, (editing) => {
 
 .article-title{
     border: none;
+}
+
+.article-info-bar {
+  /* background-color: #f8f9fa; */
+  padding: 8px 12px;
+  /* border-radius: 4px; */
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #555;
+  /* border: 1px solid #e0e0e0; */
 }
 
 .article-title:empty::before {

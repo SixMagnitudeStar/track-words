@@ -36,6 +36,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     }
 
     onloading.value = true
+
     try {
       const response = await api.get('/articles', { headers: headers })
       const fetchedArticles = Array.isArray(response.data) ? response.data : []
@@ -112,6 +113,8 @@ export const useArticleStore = defineStore('articleStore', () => {
     }
 
     try {
+      onloading.value = true;
+
       let response
       const isNew = newArticleID_arr.includes(body.id)
 
@@ -136,6 +139,9 @@ export const useArticleStore = defineStore('articleStore', () => {
     } catch (err) {
       console.error('文章儲存失敗:', err.response?.data?.detail || err)
       alert('文章儲存失敗')
+    } finally{
+      onloading.value = false;
+      
     }
   }
 
@@ -340,7 +346,7 @@ export const useArticleStore = defineStore('articleStore', () => {
               throw new Error(`API call failed with status: ${res.status}`);
             }
             const data = await res.json();
-    
+            
             const newArticle = {
                 id: articles.length > 0 ? articles[0].id + 1 : 1,
                 title: data.topic || topic || "無標題",

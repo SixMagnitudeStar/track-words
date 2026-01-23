@@ -5,10 +5,15 @@
         <input type="email" placeholder="Email" v-model="email" required >
         <input type="password" placeholder="Password"  v-model="password" required>
         <!-- <button type="submit" @click="login">Login</button> -->
-        <button type="button" @click="login">Login</button>
+        <button type="button" @click="login" :disabled="isLoading">
+            <span v-if="isLoading" class="loading-dots">
+            <span>.</span><span>.</span><span>.</span>
+            </span>
+            <span v-else>Login</span>
+        </button>
         <p v-if="error" style="color:red">{{ error }}</p>
         <p>Don't have an account? <router-link to="/signup">Sign Up</router-link></p>
-    <!-- </form> --> -->
+    <!-- </form> --> 
     </div>
 </template>
 
@@ -28,15 +33,17 @@ import api from '@/axios.js'
 const email = ref('')
 const password = ref('')
 
-// email.value='plaisir963@gmail.com'
-// password.value='yuizxc789'
-
 const error = ref('')
 
 const auth = useAuthStore()
 const router = useRouter()  // <-- 取得 router 實例
 
 async function login() {
+  if (isLoading.value) return;
+
+  isLoading.value = true;
+
+  error.value = '';
   // alert(process.env.VUE_APP_API_BASE);
   try {
     const response = await api.post('/login', {
@@ -53,6 +60,8 @@ async function login() {
   } catch (err) {
     console.error(err)
     error.value = 'Login failed'
+  } finally {
+    isLoading.value = false;
   }
 }
 
@@ -75,6 +84,38 @@ async function login() {
   border: none;
   border-radius: 3px;
   cursor: pointer;
+  min-width: 80px;
+  text-align: center;
+}
+
+
+.login-container button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+.loading-dots span {
+  animation: blink 1.4s infinite both;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0.2;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.2;
+  }
 }
 
 </style>
