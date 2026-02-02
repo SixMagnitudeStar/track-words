@@ -60,7 +60,11 @@ async function login() {
     router.push({ name: 'Home' })
   } catch (err) {
     console.error(err)
-    error.value = 'Login failed'
+    if (err.response && err.response.data && err.response.data.message) {
+      error.value = err.response.data.message; // Display specific error message from the backend
+    } else {
+      error.value = 'Login failed. Please try again.'; // Generic error message
+    }
   } finally {
     isLoading.value = false;
   }
