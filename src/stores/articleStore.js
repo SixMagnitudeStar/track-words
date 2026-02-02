@@ -339,9 +339,15 @@ export const useArticleStore = defineStore('articleStore', () => {
         onloading.value = true;
         try {
             const encodedTopic = encodeURIComponent(topic);
-            const url = `http://127.0.0.1:8000/essay?topic=${encodedTopic}&word_limit=${wordLimit}`;
-    
-            const res = await fetch(url);
+            // const url = `http://127.0.0.1:8000/essay?topic=${encodedTopic}&word_limit=${wordLimit}`;
+
+            const res = await api.get('/essay', {
+              params: {
+                topic: encodedTopic,
+                word_limit: wordLimit
+              }
+            });
+            
             if (!res.ok) {
               throw new Error(`API call failed with status: ${res.status}`);
             }
