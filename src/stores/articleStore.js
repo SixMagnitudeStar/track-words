@@ -336,45 +336,49 @@ export const useArticleStore = defineStore('articleStore', () => {
       
       // --- 隨機文章 ---
       async function fetchRandomArticle(topic, wordLimit = 500) {
-        onloading.value = true;
-        try {
-            const encodedTopic = encodeURIComponent(topic);
-            // const url = `http://127.0.0.1:8000/essay?topic=${encodedTopic}&word_limit=${wordLimit}`;
+          onloading.value = true;
+          try {
+              // 1. 使用 axios (api.get)，params 會自動處理 URL 編碼，不需手動 encodeURIComponent
+              const res = await api.get('/essay', {
+                  params: {
+                      topic: topic,
+                      word_limit: wordLimit
+                  }
+              });
 
-            const res = await api.get('/essay', {
-              params: {
-                topic: encodedTopic,
-                word_limit: wordLimit
-              }
-            });
-            
-            if (!res.ok) {
-              throw new Error(`API call failed with status: ${res.status}`);
-            }
-            const data = await res.json();
-            
-            const newArticle = {
-                id: articles.length > 0 ? articles[0].id + 1 : 1,
-                title: data.topic || topic || "無標題",
-                content: data.essay || data.text || "",
-                blocks: [],
-                note: data.note || ""
-            };
-            
-            newArticleID_arr.push(newArticle.id);
-            articles.unshift(newArticle);
-            selectArticle(0);
-            isEditing.value = true;
-    
-        } catch (err) {
-            console.error("生成隨機文章失敗:", err);
-            alert(`無法生成主題為 "${topic}" 的文章。請稍後再試。`);
-        } finally {
-            onloading.value = false;
-        }
+              // 2. Axios 資料直接就在 res.data 裡，不需要 await res.json()
+              const data = res.data; 
+              
+              console.log('✅ 生成文章成功:', data);
+
+              const newArticle = {
+                  id: articles.length > 0 ? articles[0].id + 1 : 1,
+                  title: data.topic || topic || "無標題",
+                  content: data.essay || data.text || "",
+                  blocks: [],
+                  note: data.note || ""
+              };
+              
+              newArticleID_arr.push(newArticle.id);
+              articles.unshift(newArticle);
+              selectArticle(0);
+              isEditing.value = true;
+
+          } catch (err) {
+              // Axios 的錯誤訊息通常在 err.response.data 裡
+              console.error("生成隨機文章失敗:", err);
+              alert(`無法生成主題為 "${topic}" 的文章。原因：${err.message}`);
+          } finally {
+              onloading.value = false;
+          }
       }
-    
-    
+
+
+
+
+
+
+
       async function getMarkedWordsFromArticles(articleIds) {
         console.log('Simulating fetching marked words for article IDs:', articleIds);
         // Simulate API call by filtering local data
