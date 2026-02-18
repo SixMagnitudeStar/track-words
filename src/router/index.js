@@ -9,6 +9,8 @@ import personalSetting from '@/views/personalSetting.vue'
 import { useAuthStore } from '@/auth.js'
 import signUp from '@/views/signUp.vue'
 import EnZhQuiz from '@/views/EnZhQuiz.vue'
+import ForgotPasswordView from '../views/ForgotPassword.vue'
+import ResetPasswordView from '../views/ResetPassword.vue'
 //import jwtDecode from 'jwt-decode'
 
 //console.log('jwtDecode:', jwtDecode) // 調試：檢// 備用方案：嘗試顯式訪問 default
@@ -34,6 +36,8 @@ const routes = [
   
   },
   { path: '/signup', component: signUp},
+  { path: '/forgot-password', component: ForgotPasswordView },
+  { path: '/reset-password', component: ResetPasswordView },
     
   { path: '/personalSetting', component: personalSetting},
   { path: '/EnZhQuiz', component: EnZhQuiz}
@@ -54,7 +58,7 @@ router.beforeEach((to, from, next) => {
   const token = auth.token || localStorage.getItem('token')
 
   // 1. 定義「不需要登入」的白名單頁面 (使用路徑或是 Name)
-  const whiteList = ['/login', '/signup']
+  const whiteList = ['/login', '/signup', '/forgot-password', '/reset-password']
   const isWhiteList = whiteList.includes(to.path)
 
   // 2. 如果要去的是白名單頁面，直接放行
