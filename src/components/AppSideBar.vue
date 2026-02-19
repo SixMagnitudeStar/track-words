@@ -16,6 +16,12 @@
     </div>
     <transition name="slide">
       <div v-if="showPanel" class="panel">
+        <router-link to="/personalSetting" class="router-link-custom">
+          <span class="iconBox">
+            <img class="icon" src="@/assets/edit.png" alt="個人設定" />
+            <span>個人設定</span>
+          </span>
+        </router-link>
         <router-link to="/" class="router-link-custom">
           <span class="iconBox">
             <img class="icon" src="@/assets/house.png" alt="首頁" />
