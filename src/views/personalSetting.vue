@@ -1,31 +1,3 @@
-<!-- <template>
-<div class="container">
-  <h1>個人設定</h1>
-  <form>
-    <label for="nickname">暱稱:</label>
-    <input type="text" id="nickname" name="nickname" placeholder="輸入暱稱">
-
-    <label for="bgcolor">背景顏色:</label>
-    <select id="bgcolor" name="bgcolor">
-      <option value="#f0f0f0">淺灰色</option>
-      <option value="#e0e0e0">灰色</option>
-      <option value="#d0d0d0">深灰色</option>
-      <option value="#c0c0c0">更深灰色</option>
-      <option value="#a0a0a0">暗灰色</option>
-    </select>
-
-    <label for="article_title">文章主題:</label>
-    <input type="text" id="article_title" name="article_title" placeholder="輸入文章主題">
-
-    <label for="article_length">文章字數:</label>
-    <input type="number" id="article_length" name="article_length" min="500" max="2500" placeholder="500-2500">
-    <span style="font-size:smaller;color:#999;">(建議字數 500~2500)</span>
-
-    <button type="submit">儲存設定</button>
-  </form>
-</div>
-</template> -->
-
 <template>
   <div class="container">
     <!-- 風格設定 -->
@@ -33,11 +5,40 @@
       <h2>風格設定</h2>
       <div class="form-group">
         <label>暱稱</label>
-        <input type="text" placeholder="輸入暱稱" />
+        <input type="text" v-model="userData.nickname" placeholder="輸入暱稱" />
       </div>
       <div class="form-group">
         <label>背景顏色</label>
         <input type="color" />
+      </div>
+    </section>
+
+    <!-- 會員資訊 -->
+    <section class="card">
+      <h2>會員資訊</h2>
+      <div class="info-group">
+        <label>會員等級:</label>
+        <span>{{ userData.subscription?.plan_name || 'N/A' }}</span>
+      </div>
+      <div class="info-group">
+        <label>訂閱狀態:</label>
+        <span>{{ subscriptionStatusText }}</span>
+      </div>
+      <div class="info-group">
+        <label>訂閱開始日期:</label>
+        <span>{{ formatDate(userData.subscription?.start_date) }}</span>
+      </div>
+      <div class="info-group">
+        <label>訂閱結束日期:</label>
+        <span>{{ formatDate(userData.subscription?.end_date) }}</span>
+      </div>
+      <div class="info-group" v-if="userData.subscription?.plan_price > 0">
+        <label>方案費用:</label>
+        <span>{{ userData.subscription?.plan_price }}</span>
+      </div>
+      <div class="info-group">
+        <label>方案描述:</label>
+        <span>{{ userData.subscription?.plan_description || 'N/A' }}</span>
       </div>
     </section>
 
@@ -85,21 +86,31 @@
 }
 
 /* 表單群組 */
-.form-group {
+.form-group, .info-group {
   margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.form-group label {
+.form-group label, .info-group label {
   display: block;
   margin-bottom: 5px;
   color: #333;
+  min-width: 100px; /* 統一 label 寬度 */
+  font-weight: bold;
+}
+
+.info-group span {
+    color: #555;
+    font-size: 1rem;
 }
 
 .form-group input[type="text"],
 .form-group input[type="number"],
 .form-group textarea,
 .form-group input[type="color"] {
-  width: 100%;
+  flex-grow: 1; /* 讓輸入框佔據剩餘空間 */
   padding: 8px 10px;
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -121,10 +132,45 @@ input[type="color"] {
 }
 </style>
 <script setup>
+import { ref, onMounted, computed } from 'vue';
+import api from '@/axios.js';
+
 /* global defineOptions */
 defineOptions({
   name: 'personalSetting'
-})
+});
+
+const userData = ref({
+  email: '',
+  nickname: '',
+  subscription: null // Initialize as null or empty object
+});
+
+onMounted(async () => {
+  try {
+    const response = await api.get('/profile');
+    userData.value = response.data;
+  } catch (error) {
+    console.error('Failed to fetch user profile:', error);
+  }
+});
+
+const subscriptionStatusText = computed(() => {
+  if (!userData.value.subscription) return 'N/A';
+  switch (userData.value.subscription.status) {
+    case 'active': return '啟用中';
+    case 'expired': return '已過期';
+    case 'canceled': return '已取消';
+    case 'trialing': return '試用中';
+    default: return userData.value.subscription.status;
+  }
+});
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString(); // Format as local date string
+};
 </script>
 <!-- 
 <style scoped>

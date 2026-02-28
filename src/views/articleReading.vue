@@ -17,7 +17,7 @@
           <div class="tooltip-text">儲存文章</div>
         </div>
         <div class="tooltip">
-          <img @click="articleStore.deleteArticle()" class="icon" src="../assets/bin.png" alt="刪除文章" title="刪除文章">
+          <img @click="handleDeleteArticle" class="icon" src="../assets/bin.png" alt="刪除文章" title="刪除文章">
           <div class="tooltip-text">刪除文章</div>
         </div>
       </span>
@@ -83,18 +83,23 @@
         ></div>
         
       <div id="spandiv" v-else v-show="!onloading">
-      <span
-        v-for="(block, index) in selectedArticle.blocks"
-        :style="block.style" 
-        :key="index"
-        :class="{ 
-          word: block.text_type==='word', 
-          active: block.marked,
-          paragraph: block.text_type==='paragraph' 
-        }"
-        @click="articleStore.toggleBlockMark(block)"
-        v-html="block.text"
-      ></span>
+        <template v-for="(block, index) in selectedArticle.blocks" :key="index">
+          <img v-if="block.text_type === 'image'" 
+               :src="block.text" 
+               class="article-image" 
+               :style="block.style"
+          />
+          <span v-else
+            :style="block.style" 
+            :class="{ 
+              word: block.text_type==='word', 
+              active: block.marked,
+              paragraph: block.text_type==='paragraph' 
+            }"
+            @click="articleStore.toggleBlockMark(block)"
+            v-html="block.text"
+          ></span>
+        </template>
       </div>
     </div>
 
@@ -218,8 +223,8 @@ function syncRefsToStore() {
     if (noteArea.value && noteArea.value.innerText !== selectedArticle.value.note) {
         noteArea.value.innerText = selectedArticle.value.note
     }
-    if (isEditing.value && editorRef.value && editorRef.value.innerText !== selectedArticle.value.content) {
-      editorRef.value.innerText = selectedArticle.value.content;
+    if (isEditing.value && editorRef.value && editorRef.value.innerHTML !== selectedArticle.value.content) {
+      editorRef.value.innerHTML = selectedArticle.value.content;
     }
 }
 
@@ -243,7 +248,7 @@ function onTitleInput(e) {
 }
 
 function onContentInput(e) {
-  articleStore.updateArticleContent(e.target.innerText)
+  articleStore.updateArticleContent(e.target.innerHTML)
 }
 
 function handleTitleKeydown(e) {
@@ -294,7 +299,6 @@ function isWord(str) {
 
 // 解析文章編輯器的內容，拆成 blocks
 const parseArticleText = computed(() => {
-    // ... (parsing logic remains the same)
     const blocks = []
     let idx = 0
     const editor = editorRef.value
@@ -318,6 +322,17 @@ const parseArticleText = computed(() => {
         }
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         const tag = node.tagName.toLowerCase()
+
+        if (tag === 'img') {
+          blocks.push({
+            index: idx, text: node.src, text_type: 'image',
+            previous_index: idx === 0 ? null : idx - 1,
+            next_index: null, style: parentStyle
+          })
+          idx++
+          return
+        }
+
         if ((tag === 'p' || tag === 'div') && idx > 0) {
           blocks.push({
             index: idx, text: '\n', text_type: 'paragraph',
@@ -358,6 +373,13 @@ async function handleSaveArticle() {
     blocksToSave = parseArticleText.value;
   }
   await articleStore.saveArticle(blocksToSave);
+}
+
+function handleDeleteArticle() {
+  const title = selectedArticle.value.title || '這篇文章';
+  if (window.confirm(`確定要刪除「${title}」嗎？此動作無法復原。`)) {
+    articleStore.deleteArticle();
+  }
 }
 
 // 筆記自動儲存
@@ -438,6 +460,13 @@ watch(isEditing, (editing) => {
 .word:hover{
   background-color: #ddd;
   border-radius: 5px;
+}
+
+.article-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px 0;
 }
 
 .article-content{
