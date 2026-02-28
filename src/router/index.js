@@ -11,6 +11,7 @@ import signUp from '@/views/signUp.vue'
 import EnZhQuiz from '@/views/EnZhQuiz.vue'
 import ForgotPasswordView from '../views/ForgotPassword.vue'
 import ResetPasswordView from '../views/ResetPassword.vue'
+import AdminDashboard from '@/views/AdminDashboard.vue'
 //import jwtDecode from 'jwt-decode'
 
 //console.log('jwtDecode:', jwtDecode) // 調試：檢// 備用方案：嘗試顯式訪問 default
@@ -40,7 +41,12 @@ const routes = [
   { path: '/reset-password', component: ResetPasswordView },
     
   { path: '/personalSetting', component: personalSetting},
-  { path: '/EnZhQuiz', component: EnZhQuiz}
+  { path: '/EnZhQuiz', component: EnZhQuiz},
+  { 
+    path: '/admin', 
+    component: AdminDashboard,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  }
   // 你可以在這裡加入更多頁面
 ]
 
@@ -84,9 +90,17 @@ router.beforeEach((to, from, next) => {
       return next('/login')
     }
 
-    // 5. Token 有效，確保 Store 裡面的 token 是同步的
+    // 5. Token 有效，確保 Store 裡面的 token 是同步 of
     if (!auth.token) {
       auth.token = token 
+    }
+
+    // 6. 管理員權限檢查
+    if (to.meta.requiresAdmin) {
+      if (!decoded.is_admin) {
+        alert('權限不足，無法進入管理頁面')
+        return next('/home')
+      }
     }
     
     next() // 驗證通過，放行
