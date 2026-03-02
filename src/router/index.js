@@ -12,6 +12,8 @@ import EnZhQuiz from '@/views/EnZhQuiz.vue'
 import ForgotPasswordView from '../views/ForgotPassword.vue'
 import ResetPasswordView from '../views/ResetPassword.vue'
 import AdminDashboard from '@/views/AdminDashboard.vue'
+import SubscriptionManagement from '../views/SubscriptionManagement.vue' // <-- 新增這行
+
 //import jwtDecode from 'jwt-decode'
 
 //console.log('jwtDecode:', jwtDecode) // 調試：檢// 備用方案：嘗試顯式訪問 default
@@ -43,9 +45,16 @@ const routes = [
   { path: '/personalSetting', component: personalSetting},
   { path: '/EnZhQuiz', component: EnZhQuiz},
   { 
-    path: '/admin', 
+    path: '/admin/dashboard', // <-- Updated path for AdminDashboard
+    name: 'AdminDashboard',
     component: AdminDashboard,
     meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/subscriptions', // <-- New route for SubscriptionManagement
+    name: 'SubscriptionManagement',
+    component: SubscriptionManagement,
+    meta: { requiresAuth: true, requiresAdmin: true },
   }
   // 你可以在這裡加入更多頁面
 ]
