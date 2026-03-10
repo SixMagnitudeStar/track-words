@@ -60,6 +60,14 @@
 
     <div class="article-content" >
       <div class="article-info-bar">
+        <div class="mark-mode-selector">
+          <span>標記模式：</span>
+          <label class="switch">
+            <input type="checkbox" v-model="isSelectionMode">
+            <span class="slider round"></span>
+          </label>
+          <span class="mode-label">{{ isSelectionMode ? 'Selection' : 'Click' }}</span>
+        </div>
         <span>已標記單字: {{ markedWordsCount }}</span>
       </div>
       <h1 class="article-title"
@@ -82,7 +90,7 @@
          ref="editorRef"
         ></div>
         
-      <div id="spandiv" v-else v-show="!onloading">
+      <div id="spandiv" v-else v-show="!onloading" @mouseup="handleMouseUp">
         <template v-for="(block, index) in selectedArticle.blocks" :key="index">
           <img v-if="block.text_type === 'image'" 
                :src="block.text" 
@@ -96,11 +104,20 @@
               active: block.marked,
               paragraph: block.text_type==='paragraph' 
             }"
-            @click="articleStore.toggleBlockMark(block)"
+            @click="handleBlockClick(block, $event)"
             v-html="block.text"
           ></span>
         </template>
       </div>
+      
+      <!-- Floating Cancel Confirmation -->
+      <div v-if="showCancelConfirmation" 
+           class="cancel-confirmation" 
+           :style="confirmationPos"
+           @mouseleave="showCancelConfirmation = false">
+        <button @click="confirmCancelMark">Cancel Mark</button>
+      </div>
+    </div>
     </div>
 
     <div class="note-div">
@@ -176,6 +193,10 @@ const { articles, selectedIndex, selectedArticle, isEditing, onloading } = store
 
 
 // --- Local State & Refs ---
+const isSelectionMode = ref(false)
+const showCancelConfirmation = ref(false)
+const confirmationPos = ref({ top: '0px', left: '0px' })
+const activeMarkId = ref(null)
 const translated = ref(false)
 const showTranslations = ref(false)
 const isTranslating = ref(false)
@@ -215,6 +236,48 @@ onMounted(() => {
 })
 
 // --- Methods ---
+
+function handleBlockClick(block, event) {
+  if (isSelectionMode.value) return;
+
+  if (block.marked) {
+    // Show confirmation button
+    const rect = event.target.getBoundingClientRect();
+    confirmationPos.value = {
+      top: `${rect.top + window.scrollY - 30}px`,
+      left: `${rect.left + window.scrollX}px`
+    };
+    activeMarkId.value = block.mark_id;
+    showCancelConfirmation.value = true;
+  } else {
+    // Single word mark
+    const markId = Date.now().toString();
+    articleStore.toggleBlockMark(block, markId);
+    showCancelConfirmation.value = false;
+  }
+}
+
+async function confirmCancelMark() {
+  if (!activeMarkId.value) return;
+  await articleStore.unmarkGroup(activeMarkId.value);
+  showCancelConfirmation.value = false;
+  activeMarkId.value = null;
+}
+
+function handleMouseUp() {
+  if (!isSelectionMode.value) return;
+  
+  const selection = window.getSelection();
+  const selectedText = selection.toString().trim();
+  
+  if (selectedText.length > 0) {
+    const markId = Date.now().toString();
+    // In selection mode, we might need a more complex store action 
+    // to mark multiple blocks with the same mark_id
+    articleStore.markSelection(selectedText, selectedArticle.value.id, markId);
+    selection.removeAllRanges();
+  }
+}
 
 function syncRefsToStore() {
     if (editableTitle.value && editableTitle.value.innerText !== selectedArticle.value.title) {
@@ -843,5 +906,101 @@ watch(isEditing, (editing) => {
   margin-left: 8px;
   color: #555;
   font-style: italic;
+}
+
+/* Mark Mode Switch Styles */
+.mark-mode-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.mode-label {
+  font-weight: bold;
+  min-width: 70px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(20px);
+  -ms-transform: translateX(20px);
+  transform: translateX(20px);
+}
+
+.slider.round {
+  border-radius: 20px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.cancel-confirmation {
+  position: absolute;
+  z-index: 100;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  padding: 5px;
+}
+
+.cancel-confirmation button {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cancel-confirmation button:hover {
+  background-color: #ff3333;
 }
 </style>

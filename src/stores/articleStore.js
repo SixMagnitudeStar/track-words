@@ -245,26 +245,35 @@ export const useArticleStore = defineStore('articleStore', () => {
 
 
   // 切換 Block 標記狀態
-  async function toggleBlockMark(block) {
+  async function toggleBlockMark(block, markId = null) {
     if (block.text_type !== 'word') return;
 
     const newMarkedState = !block.marked;
     block.marked = newMarkedState;
+    block.mark_id = newMarkedState ? markId : null;
 
     // Call API to update block's marked status
     try {
-        await api.patch(`/article-blocks/${block.id}/marked`, { "marked": newMarkedState }, { headers });
+        await api.patch(`/article-blocks/${block.id}/marked`, { 
+          "marked": newMarkedState,
+          "mark_id": block.mark_id
+        }, { headers });
     } catch (err) {
         console.error('更新 Block 標記失敗:', err);
         block.marked = !newMarkedState; // Revert on failure
+        block.mark_id = null;
         return;
     }
 
     // Call API to add/remove from marked_words table
     if (newMarkedState) {
         try {
-            await api.post('/markedword', { "article_id": selectedArticle.value.id, "word": block.text }, { headers });
-            selectedArticle.value.marked_words.push({ 'word': block.text });
+            await api.post('/markedword', { 
+              "article_id": selectedArticle.value.id, 
+              "word": block.text,
+              "mark_id": markId
+            }, { headers });
+            selectedArticle.value.marked_words.push({ 'word': block.text, 'mark_id': markId });
         } catch (err) {
             console.error('新增 markedword 失敗:', err);
         }
@@ -281,8 +290,65 @@ export const useArticleStore = defineStore('articleStore', () => {
         } catch (err) {
             console.error('刪除 markedword 失敗:', err);
         }
+    }
+  }
+
+  async function markSelection(text, articleId, markId) {
+    // 1. Add to marked_words
+    try {
+      await api.post('/markedword', { 
+        "article_id": articleId, 
+        "word": text,
+        "mark_id": markId
+      }, { headers });
+      selectedArticle.value.marked_words.push({ 'word': text, 'mark_id': markId });
+    } catch (err) {
+      console.error('新增 selection markedword 失敗:', err);
+      return;
+    }
+
+    // 2. We need to identify which blocks are part of this selection.
+    // This is tricky because the frontend and backend need to sync.
+    // For now, we'll mark all blocks that MATCH the selected text and are currently unmarked.
+    // A better way would be to pass indices from the view.
+    // Let's assume the view will handle the local block updates for now.
+    // Or we can add a more sophisticated logic here if needed.
+  }
+
+  async function unmarkGroup(markId) {
+    if (!markId) return;
+
+    // 1. Find all blocks with this markId
+    const blocksToUnmark = selectedArticle.value.blocks.filter(b => b.mark_id === markId);
+    const wordToUnmark = selectedArticle.value.marked_words.find(w => w.mark_id === markId);
+
+    // 2. Update blocks on backend
+    try {
+      await api.patch(`/article/unmark-group/${markId}`, {}, { headers });
+      
+      // 3. Update local state
+      blocksToUnmark.forEach(b => {
+        b.marked = false;
+        b.mark_id = null;
+      });
+
+      if (wordToUnmark) {
+        await api.delete(`/markedword`, { 
+          params: { article_id: selectedArticle.value.id, word: wordToUnmark.word },
+          headers: headers
+        });
+        const idx = selectedArticle.value.marked_words.findIndex(w => w.mark_id === markId);
+        if (idx > -1) {
+          selectedArticle.value.marked_words.splice(idx, 1);
         }
       }
+      
+      alert('已取消標記');
+    } catch (err) {
+      console.error('取消群組標記失敗:', err);
+      alert('取消標記失敗');
+    }
+  }
     
       async function translateMarkedWords() {
         const wordsToTranslate = selectedArticle.value.marked_words;
