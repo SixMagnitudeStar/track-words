@@ -1,46 +1,41 @@
 <template>
-  <!-- <p>I'm gemini</p> -->
-
   <div id="app">
-    <!-- <nav>
-      <router-link to="/login">登入</router-link> |
-      <router-link to="/signup">註冊</router-link> |
-      <router-link to="/">首頁</router-link> |
-      <router-link to="/ELP">English Listening Practice</router-link> |
-      <router-link to="/UnfamiliarWordsArea">不熟單字記錄區</router-link> |
-      <router-link to="/EnZhQuiz">英翻中測驗</router-link> |
-      <router-link to="/articleReading">文章閱讀區</router-link> |
-      <router-link to ="/personalSetting">個人設定</router-link> |
-    </nav> -->
     <AppSideBar v-if="isLoggedIn"></AppSideBar>
 
-     <!-- 路由出口加 transition -->
-    <transition name="zoom" mode="out-in">
-  <router-view class="router-view"></router-view>
-</transition>
-   
-    <!-- <keep-alive>
-      <router-view class="router-view"></router-view>
-    </keep-alive> -->
-<!--     
-    <router-view class="router-view"></router-view> -->
+    <!-- Vue 3 建議的路由過渡寫法 -->
+    <router-view v-slot="{ Component }">
+      <transition :name="transitionName" mode="out-in">
+        <component :is="Component" class="router-view" />
+      </transition>
+    </router-view>
   </div>
-  <!-- <img alt="Vue logo" src="./assets/logo.png"> -->
-  <!-- <HelloWorld msg="Welcome to Your Vue.js App"/> -->
-
- 
 </template>
 
 <script setup>
 import AppSideBar from '@/components/AppSideBar.vue'
 import { useAuthStore } from './auth.js'
 import { storeToRefs } from 'pinia'
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 const authStore = useAuthStore()
 const { isLoggedIn } = storeToRefs(authStore)
+
+const route = useRoute()
+const transitionName = ref('zoom')
+
+// 監聽路由變化，針對登入跳轉首頁做特殊處理
+watch(() => route.path, (to, from) => {
+  if (from === '/login' && (to === '/' || to === '/Home')) {
+    transitionName.value = 'fade-quick'
+  } else {
+    transitionName.value = 'zoom'
+  }
+}, { immediate: true })
 </script>
 
 <style>
+/* ... 前面保留不變 ... */
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -68,8 +63,6 @@ body{
   background-attachment: fixed; /* 背景固定，不隨滾動拉伸 */
   background-position: center center; /* 居中顯示 */
 }
-
-
 
 /* 訊息提示框 */
 .tooltip {
@@ -121,7 +114,6 @@ body{
   height: 25px;
   display: block;
   cursor: pointer;
-  
 }
 
 .iconBox{
@@ -145,7 +137,7 @@ body{
   cursor: pointer;           /* 滑鼠顯示小手 */
 }
 
-
+/* 統一 router-view 樣式 */
 .router-view{
   display: block;
   margin-top: 5vh;
@@ -153,7 +145,10 @@ body{
   padding: 20px;
   border-radius: 5px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-
+  /* 增加此項，確保動畫寬度穩定 */
+  box-sizing: border-box; 
+  width: auto;
+  min-width: 300px;
 }
 
 .parallel-div{
@@ -161,8 +156,9 @@ body{
 }
 
 
+/* Zoom 動畫 - 縮短時間至 0.5s 讓切換更俐落 */
 .zoom-enter-active, .zoom-leave-active {
-  transition: all 1.2s ease;
+  transition: all 0.5s ease;
 }
 .zoom-enter-from {
   transform: scale(0.6);
@@ -170,6 +166,14 @@ body{
 }
 .zoom-leave-to {
   transform: scale(1.4);
+  opacity: 0;
+}
+
+/* 快速淡入動畫 */
+.fade-quick-enter-active, .fade-quick-leave-active {
+  transition: opacity 0.5s ease;
+}
+.fade-quick-enter-from, .fade-quick-leave-to {
   opacity: 0;
 }
 

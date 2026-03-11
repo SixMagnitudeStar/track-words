@@ -293,7 +293,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     }
   }
 
-  async function markSelection(text, articleId, markId) {
+  async function markSelection(text, articleId, markId, startIndex, endIndex) {
     // 1. Add to marked_words
     try {
       await api.post('/markedword', { 
@@ -307,12 +307,25 @@ export const useArticleStore = defineStore('articleStore', () => {
       return;
     }
 
-    // 2. We need to identify which blocks are part of this selection.
-    // This is tricky because the frontend and backend need to sync.
-    // For now, we'll mark all blocks that MATCH the selected text and are currently unmarked.
-    // A better way would be to pass indices from the view.
-    // Let's assume the view will handle the local block updates for now.
-    // Or we can add a more sophisticated logic here if needed.
+    // 2. Identify and update blocks
+    const blocksToUpdate = selectedArticle.value.blocks.filter(b => b.index >= startIndex && b.index <= endIndex);
+    const blockIds = blocksToUpdate.map(b => b.id);
+
+    try {
+      await api.patch('/article-blocks/batch-mark', {
+        block_ids: blockIds,
+        marked: true,
+        mark_id: markId
+      }, { headers });
+
+      // Update local state
+      blocksToUpdate.forEach(b => {
+        b.marked = true;
+        b.mark_id = markId;
+      });
+    } catch (err) {
+      console.error('批次更新 blocks 失敗:', err);
+    }
   }
 
   async function unmarkGroup(markId) {
@@ -320,8 +333,7 @@ export const useArticleStore = defineStore('articleStore', () => {
 
     // 1. Find all blocks with this markId
     const blocksToUnmark = selectedArticle.value.blocks.filter(b => b.mark_id === markId);
-    const wordToUnmark = selectedArticle.value.marked_words.find(w => w.mark_id === markId);
-
+    
     // 2. Update blocks on backend
     try {
       await api.patch(`/article/unmark-group/${markId}`, {}, { headers });
@@ -332,18 +344,13 @@ export const useArticleStore = defineStore('articleStore', () => {
         b.mark_id = null;
       });
 
-      if (wordToUnmark) {
-        await api.delete(`/markedword`, { 
-          params: { article_id: selectedArticle.value.id, word: wordToUnmark.word },
-          headers: headers
-        });
-        const idx = selectedArticle.value.marked_words.findIndex(w => w.mark_id === markId);
-        if (idx > -1) {
-          selectedArticle.value.marked_words.splice(idx, 1);
-        }
+      // Remove from marked_words
+      const idx = selectedArticle.value.marked_words.findIndex(w => w.mark_id === markId);
+      if (idx > -1) {
+        selectedArticle.value.marked_words.splice(idx, 1);
       }
       
-      alert('已取消標記');
+      console.log('已取消群組標記');
     } catch (err) {
       console.error('取消群組標記失敗:', err);
       alert('取消標記失敗');
@@ -479,6 +486,8 @@ export const useArticleStore = defineStore('articleStore', () => {
         addMarkedWord,
         deleteMarkedWord,
         toggleBlockMark,
+        markSelection,
+        unmarkGroup,
         saveNote,
         fetchRandomArticle,
         getMarkedWordsFromArticles,

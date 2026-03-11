@@ -83,7 +83,7 @@ async function login() {
 
 <style>
 body.login-bg {
-  background-image: url('@/assets/track-words-bg.jpg');
+  background-image: url('@/assets/login-page-bg.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
