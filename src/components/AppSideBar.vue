@@ -54,6 +54,23 @@
             </span>
           </router-link>
         </div>
+        
+        <template v-if="auth.isAdmin">
+          <hr>
+          <router-link to="/admin/dashboard" class="router-link-custom">
+            <span class="iconBox">
+              <img class="icon" src="@/assets/edit.png" alt="管理員儀表板" /> <!-- Using edit.png as placeholder -->
+              <span>管理員儀表板</span>
+            </span>
+          </router-link>
+          <router-link to="/admin/subscriptions" class="router-link-custom">
+            <span class="iconBox">
+              <img class="icon" src="@/assets/plus.png" alt="訂閱管理" /> <!-- Using plus.png as placeholder -->
+              <span>訂閱管理</span>
+            </span>
+          </router-link>
+        </template>
+        
         <span class="iconBox logoutBox" @click="logout">
           <img class="icon" src="../assets/logout.png" alt="登出" />
           <span>登出</span>
@@ -121,6 +138,7 @@ const toggleSideBarIcon = ref(require('../assets/angle-double-left.png'))
 
 
 const auth = useAuthStore()
+console.log('AppSideBar: auth.isAdmin value on render:', auth.isAdmin); // Debugging log
 
 
 // const isLoggedIn = computed(() => auth.isLoggedIn)

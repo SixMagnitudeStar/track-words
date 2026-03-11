@@ -1,13 +1,11 @@
 <template>
   <div id="container">
     <div>
-      <!-- <button @click="showblock">顯示block</button> -->
       <span class="iconBox">
         <div class="tooltip">
           <img @click="handleCreateNewArticle" class="icon" src="../assets/plus.png" alt="建立文章" title="建立文章"/>
           <div class="tooltip-text">建立文章</div>
         </div>
-        
         <div class="tooltip">
           <img @click="openTopicModal" class="icon" src="../assets/random.png" alt="隨機生成文章" title="隨機生成文章">
           <div class="tooltip-text">隨機一篇生成文章</div>
@@ -23,33 +21,29 @@
       </span>
       <ul class="article-list">
         <li v-for="(article,index) in articles" 
-        v-bind:key="article.id"
-        :class="{selected: selectedIndex === index}"
-        @click="articleStore.selectArticle(index)"
-        >{{ article.title  || '未命名文章' }}</li>
+            :key="article.id"
+            :class="{selected: selectedIndex === index}"
+            @click="articleStore.selectArticle(index)">
+          {{ article.title || '未命名文章' }}
+        </li>
       </ul>
     </div>
 
-    <!-- Topic Selection Modal -->
     <div v-if="isTopicModalVisible" class="modal-overlay" @click.self="closeTopicModal">
       <div class="modal-content">
         <h3>選擇文章主題與字數</h3>
         <div class="topic-buttons">
-          <button v-for="topic in predefinedTopics" :key="topic" @click="selectPredefinedTopic(topic)">
-            {{ topic }}
-          </button>
+          <button v-for="topic in predefinedTopics" :key="topic" @click="selectPredefinedTopic(topic)">{{ topic }}</button>
         </div>
         <div class="custom-topic">
           <p>或輸入自訂主題：</p>
-          <input type="text" v-model="selectedTopic" placeholder="例如：Artificial Intelligence" @keyup.enter="handleGenerateArticle"/>
+          <input type="text" v-model="selectedTopic" placeholder="例如：AI" @keyup.enter="handleGenerateArticle"/>
         </div>
         <div class="word-count-selector">
-            <label for="word-count">選擇文章字數：</label>
-            <select id="word-count" v-model="selectedWordCount">
-                <option v-for="count in wordCountOptions" :key="count" :value="count">
-                {{ count }} 字
-                </option>
-            </select>
+          <label for="word-count">選擇文章字數：</label>
+          <select id="word-count" v-model="selectedWordCount">
+            <option v-for="count in wordCountOptions" :key="count" :value="count">{{ count }} 字</option>
+          </select>
         </div>
         <div class="modal-actions">
           <button @click="handleGenerateArticle" :disabled="!selectedTopic.trim()">生成文章</button>
@@ -58,48 +52,49 @@
       </div>
     </div>
 
-    <div class="article-content" >
+    <div class="article-content">
       <div class="article-info-bar">
+        <div class="mark-mode-selector">
+          <span>標記模式：</span>
+          <label class="switch">
+            <input type="checkbox" v-model="isSelectionMode">
+            <span class="slider round"></span>
+          </label>
+          <span class="mode-label">{{ isSelectionMode ? 'Selection' : 'Click' }}</span>
+        </div>
         <span>已標記單字: {{ markedWordsCount }}</span>
       </div>
+
       <h1 class="article-title"
           :contenteditable="isEditing" 
           placeholder="請輸入標題"
           @input="onTitleInput"
           @keydown="handleTitleKeydown"
           ref="editableTitle"
-          spellcheck="false"
-      ></h1>
+          spellcheck="false"></h1>
+
       <div v-if="onloading" class="loading-container">
           <div class="spinner"></div>
           <div class="loading-text">載入中...</div>
       </div>
-      <div v-if="isEditing" 
-        v-show="!onloading"
-        class="article-editor" 
-        contenteditable="true"
-        @input="onContentInput"
-         ref="editorRef"
-        ></div>
+
+      <div v-if="isEditing" v-show="!onloading" class="article-editor" contenteditable="true" @input="onContentInput" ref="editorRef"></div>
         
-      <div id="spandiv" v-else v-show="!onloading">
+      <div id="spandiv" v-else v-show="!onloading" @mouseup="handleMouseUp">
         <template v-for="(block, index) in selectedArticle.blocks" :key="index">
-          <img v-if="block.text_type === 'image'" 
-               :src="block.text" 
-               class="article-image" 
-               :style="block.style"
-          />
+          <img v-if="block.text_type === 'image'" :src="block.text" class="article-image" :style="block.style" />
           <span v-else
             :style="block.style" 
-            :class="{ 
-              word: block.text_type==='word', 
-              active: block.marked,
-              paragraph: block.text_type==='paragraph' 
-            }"
-            @click="articleStore.toggleBlockMark(block)"
+            :class="{ word: block.text_type==='word', active: block.marked, paragraph: block.text_type==='paragraph' }"
+            :data-index="index"
+            @click="handleBlockClick(block, $event)"
             v-html="block.text"
           ></span>
         </template>
+      </div>
+      
+      <div v-if="showCancelConfirmation" class="cancel-confirmation" :style="confirmationPos" @mouseleave="showCancelConfirmation = false">
+        <button @click="confirmCancelMark">Cancel Mark</button>
       </div>
     </div>
 
@@ -109,33 +104,28 @@
         <div class="record-words-area">      
           <div class="input-bar">
             <div class="translation-controls">
-              <span v-if="!isTranslating" @click="toggleTranslation" class="translation-bar" >
+              <span v-if="!isTranslating" @click="toggleTranslation" class="translation-bar">
                 <img src="../assets/translate.png" title="翻譯標記單字..">
                 <span>翻譯...</span>
                 <span class="checkmark" v-if="translated">✔</span>
               </span>
-              <span v-else class="translating-indicator">
-                翻譯中...
-              </span>
+              <span v-else class="translating-indicator">翻譯中...</span>
               <button @click="showTranslations = !showTranslations" class="toggle-translation-btn" :disabled="!hasTranslations">
                 {{ showTranslations ? '關閉翻譯' : '顯示翻譯' }}
               </button>
             </div>
             <span class="parallel-div">
-              <input v-model="inputWord" type="text" placeholder="Enter a word & phrase" @keyup.enter="handleAddMarkedWord"/>
+              <input v-model="inputWord" type="text" placeholder="Enter a word" @keyup.enter="handleAddMarkedWord"/>
               <button @click="handleAddMarkedWord">Add</button>
             </span>
           </div>
-          
           <div class="marked-word-list">
             <ul>
               <li v-for="(word, index) in selectedArticle.marked_words" :key="index">
                 <div class="parallel-div">
-                  <img @click="articleStore.deleteMarkedWord(word)" class="remove-marked-word-icon" src="../assets/bin2.png" alt="移除單字" title="移除單字">
+                  <img @click="articleStore.deleteMarkedWord(word)" class="remove-marked-word-icon" src="../assets/bin2.png">
                   <span>{{word.word}}</span>
-                  <span v-if="showTranslations && word.translation" class="translation-text">
-                    : {{ word.translation }}
-                  </span>
+                  <span v-if="showTranslations && word.translation" class="translation-text">: {{ word.translation }}</span>
                 </div>
               </li>
             </ul>
@@ -145,20 +135,14 @@
 
       <details>
         <summary>筆記</summary>
-        <div
-            class="note-area"
-            contenteditable="true"
-            ref="noteArea"
-            @input="onNoteInput"
-        ></div>
+        <div class="note-area" contenteditable="true" ref="noteArea" @input="onNoteInput"></div>
         <div class="status">{{ noteSaveStatus }}</div>
       </details>
     </div>
-  </div>
-</template>
+  </div> </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick, defineOptions } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, defineOptions } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useArticleStore } from '@/stores/articleStore.js'
 
@@ -176,6 +160,10 @@ const { articles, selectedIndex, selectedArticle, isEditing, onloading } = store
 
 
 // --- Local State & Refs ---
+const isSelectionMode = ref(false)
+const showCancelConfirmation = ref(false)
+const confirmationPos = ref({ top: '0px', left: '0px' })
+const activeMarkId = ref(null)
 const translated = ref(false)
 const showTranslations = ref(false)
 const isTranslating = ref(false)
@@ -206,6 +194,7 @@ const selectedWordCount = ref(500);
 
 // --- Lifecycle Hooks ---
 onMounted(() => {
+  document.body.classList.add('articleReading-bg')
   // Load articles only if the list is empty
   if (articles.value.length === 0) {
     articleStore.loadArticles()
@@ -214,7 +203,74 @@ onMounted(() => {
   syncRefsToStore();
 })
 
+onUnmounted(() => {
+  document.body.classList.remove('articleReading-bg')
+})
+
 // --- Methods ---
+
+async function handleBlockClick(block, event) {
+  if (!isSelectionMode.value) {
+    // Click 模式：直接切換狀態，不跳確認
+    if (block.marked) {
+      await articleStore.unmarkGroup(block.mark_id);
+    } else {
+      const markId = Date.now().toString();
+      await articleStore.toggleBlockMark(block, markId);
+    }
+    showCancelConfirmation.value = false;
+  } else {
+    // Selection 模式：點擊已標記處才跳出 Cancel Mark 按鈕
+    if (block.marked) {
+      const rect = event.target.getBoundingClientRect();
+      confirmationPos.value = {
+        top: `${rect.top + window.scrollY - 30}px`,
+        left: `${rect.left + window.scrollX}px`
+      };
+      activeMarkId.value = block.mark_id;
+      showCancelConfirmation.value = true;
+    }
+  }
+}
+
+async function confirmCancelMark() {
+  if (!activeMarkId.value) return;
+  await articleStore.unmarkGroup(activeMarkId.value);
+  showCancelConfirmation.value = false;
+  activeMarkId.value = null;
+}
+
+function handleMouseUp() {
+  if (!isSelectionMode.value) return;
+  
+  const selection = window.getSelection();
+  if (selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  const selectedText = selection.toString().trim();
+  
+  if (selectedText.length > 0) {
+    // Find all spans within the selection
+    const container = document.getElementById('spandiv');
+    const spans = container.querySelectorAll('span[data-index]');
+    let startIndex = Infinity;
+    let endIndex = -Infinity;
+
+    spans.forEach(span => {
+      if (selection.containsNode(span, true)) {
+        const index = parseInt(span.getAttribute('data-index'));
+        if (index < startIndex) startIndex = index;
+        if (index > endIndex) endIndex = index;
+      }
+    });
+
+    if (startIndex !== Infinity && endIndex !== -Infinity) {
+      const markId = Date.now().toString();
+      articleStore.markSelection(selectedText, selectedArticle.value.id, markId, startIndex, endIndex);
+    }
+    selection.removeAllRanges();
+  }
+}
 
 function syncRefsToStore() {
     if (editableTitle.value && editableTitle.value.innerText !== selectedArticle.value.title) {
@@ -429,6 +485,16 @@ watch(isEditing, (editing) => {
 });
 
 </script>
+
+<style>
+body.articleReading-bg {
+  background-image: url('@/assets/articleReading-page-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+</style>
 
 <style scoped>
 /* Styles remain unchanged */
@@ -843,5 +909,101 @@ watch(isEditing, (editing) => {
   margin-left: 8px;
   color: #555;
   font-style: italic;
+}
+
+/* Mark Mode Switch Styles */
+.mark-mode-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.mode-label {
+  font-weight: bold;
+  min-width: 70px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(20px);
+  -ms-transform: translateX(20px);
+  transform: translateX(20px);
+}
+
+.slider.round {
+  border-radius: 20px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.cancel-confirmation {
+  position: absolute;
+  z-index: 100;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  padding: 5px;
+}
+
+.cancel-confirmation button {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cancel-confirmation button:hover {
+  background-color: #ff3333;
 }
 </style>

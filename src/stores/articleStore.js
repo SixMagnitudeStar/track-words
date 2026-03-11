@@ -245,26 +245,35 @@ export const useArticleStore = defineStore('articleStore', () => {
 
 
   // 切換 Block 標記狀態
-  async function toggleBlockMark(block) {
+  async function toggleBlockMark(block, markId = null) {
     if (block.text_type !== 'word') return;
 
     const newMarkedState = !block.marked;
     block.marked = newMarkedState;
+    block.mark_id = newMarkedState ? markId : null;
 
     // Call API to update block's marked status
     try {
-        await api.patch(`/article-blocks/${block.id}/marked`, { "marked": newMarkedState }, { headers });
+        await api.patch(`/article-blocks/${block.id}/marked`, { 
+          "marked": newMarkedState,
+          "mark_id": block.mark_id
+        }, { headers });
     } catch (err) {
         console.error('更新 Block 標記失敗:', err);
         block.marked = !newMarkedState; // Revert on failure
+        block.mark_id = null;
         return;
     }
 
     // Call API to add/remove from marked_words table
     if (newMarkedState) {
         try {
-            await api.post('/markedword', { "article_id": selectedArticle.value.id, "word": block.text }, { headers });
-            selectedArticle.value.marked_words.push({ 'word': block.text });
+            await api.post('/markedword', { 
+              "article_id": selectedArticle.value.id, 
+              "word": block.text,
+              "mark_id": markId
+            }, { headers });
+            selectedArticle.value.marked_words.push({ 'word': block.text, 'mark_id': markId });
         } catch (err) {
             console.error('新增 markedword 失敗:', err);
         }
@@ -281,8 +290,72 @@ export const useArticleStore = defineStore('articleStore', () => {
         } catch (err) {
             console.error('刪除 markedword 失敗:', err);
         }
-        }
+    }
+  }
+
+  async function markSelection(text, articleId, markId, startIndex, endIndex) {
+    // 1. Add to marked_words
+    try {
+      await api.post('/markedword', { 
+        "article_id": articleId, 
+        "word": text,
+        "mark_id": markId
+      }, { headers });
+      selectedArticle.value.marked_words.push({ 'word': text, 'mark_id': markId });
+    } catch (err) {
+      console.error('新增 selection markedword 失敗:', err);
+      return;
+    }
+
+    // 2. Identify and update blocks
+    const blocksToUpdate = selectedArticle.value.blocks.filter(b => b.index >= startIndex && b.index <= endIndex);
+    const blockIds = blocksToUpdate.map(b => b.id);
+
+    try {
+      await api.patch('/article-blocks/batch-mark', {
+        block_ids: blockIds,
+        marked: true,
+        mark_id: markId
+      }, { headers });
+
+      // Update local state
+      blocksToUpdate.forEach(b => {
+        b.marked = true;
+        b.mark_id = markId;
+      });
+    } catch (err) {
+      console.error('批次更新 blocks 失敗:', err);
+    }
+  }
+
+  async function unmarkGroup(markId) {
+    if (!markId) return;
+
+    // 1. Find all blocks with this markId
+    const blocksToUnmark = selectedArticle.value.blocks.filter(b => b.mark_id === markId);
+    
+    // 2. Update blocks on backend
+    try {
+      await api.patch(`/article/unmark-group/${markId}`, {}, { headers });
+      
+      // 3. Update local state
+      blocksToUnmark.forEach(b => {
+        b.marked = false;
+        b.mark_id = null;
+      });
+
+      // Remove from marked_words
+      const idx = selectedArticle.value.marked_words.findIndex(w => w.mark_id === markId);
+      if (idx > -1) {
+        selectedArticle.value.marked_words.splice(idx, 1);
       }
+      
+      console.log('已取消群組標記');
+    } catch (err) {
+      console.error('取消群組標記失敗:', err);
+      alert('取消標記失敗');
+    }
+  }
     
       async function translateMarkedWords() {
         const wordsToTranslate = selectedArticle.value.marked_words;
@@ -413,6 +486,8 @@ export const useArticleStore = defineStore('articleStore', () => {
         addMarkedWord,
         deleteMarkedWord,
         toggleBlockMark,
+        markSelection,
+        unmarkGroup,
         saveNote,
         fetchRandomArticle,
         getMarkedWordsFromArticles,

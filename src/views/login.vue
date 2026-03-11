@@ -25,7 +25,7 @@ export default {
 </script>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/auth.js'
 import { useRouter } from 'vue-router'  // <-- 匯入 router
 import api from '@/axios.js'
@@ -39,6 +39,14 @@ const error = ref('')
 
 const auth = useAuthStore()
 const router = useRouter()  // <-- 取得 router 實例
+
+onMounted(() => {
+  document.body.classList.add('login-bg')
+})
+
+onUnmounted(() => {
+  document.body.classList.remove('login-bg')
+})
 
 async function login() {
   if (isLoading.value) return;
@@ -73,6 +81,16 @@ async function login() {
 
 </script>
 
+<style>
+body.login-bg {
+  background-image: url('@/assets/login-page-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+</style>
+
 <style scoped>
 
 .login-container input {
@@ -94,6 +112,9 @@ async function login() {
   text-align: center;
 }
 
+.login-container {
+  margin-top: 20vh;
+}
 
 .login-container button:disabled {
   background-color: #aaa;

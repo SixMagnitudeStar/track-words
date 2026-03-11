@@ -2,13 +2,19 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 
-import router from './router'  // 👈 加上這行
+import router from './router'
+
+import { useAuthStore } from './auth.js' // Import useAuthStore
 
 const app = createApp(App)
 
 app.use(router)
 
 const pinia = createPinia()
+app.use(pinia) // Must be used before mounting
 
-app.use(pinia) // 必须在挂载前使用
+// Initialize auth state
+const authStore = useAuthStore()
+authStore.checkAuthStatus()
+
 app.mount('#app')
