@@ -246,7 +246,7 @@ function handleMouseUp() {
   const selection = window.getSelection();
   if (selection.rangeCount === 0) return;
 
-  const range = selection.getRangeAt(0);
+  // const range = selection.getRangeAt(0);
   const selectedText = selection.toString().trim();
   
   if (selectedText.length > 0) {
