@@ -203,8 +203,8 @@ export const useArticleStore = defineStore('articleStore', () => {
       word: word
     }
     try {
-      await api.patch('/markedword', body, { headers });
-      selectedArticle.value.marked_words.push({ word: word });
+      const response = await api.post('/markedword', body, { headers });
+      selectedArticle.value.marked_words.push(response.data);
       console.log('新增 marked 標記成功');
     } catch (err) {
       console.error('新增 marked 標記失敗:', err.response?.data?.detail || err);
@@ -268,12 +268,12 @@ export const useArticleStore = defineStore('articleStore', () => {
     // Call API to add/remove from marked_words table
     if (newMarkedState) {
         try {
-            await api.post('/markedword', { 
+            const response = await api.post('/markedword', { 
               "article_id": selectedArticle.value.id, 
               "word": block.text,
               "mark_id": markId
             }, { headers });
-            selectedArticle.value.marked_words.push({ 'word': block.text, 'mark_id': markId });
+            selectedArticle.value.marked_words.push(response.data);
         } catch (err) {
             console.error('新增 markedword 失敗:', err);
         }
@@ -296,12 +296,12 @@ export const useArticleStore = defineStore('articleStore', () => {
   async function markSelection(text, articleId, markId, startIndex, endIndex) {
     // 1. Add to marked_words
     try {
-      await api.post('/markedword', { 
+      const response = await api.post('/markedword', { 
         "article_id": articleId, 
         "word": text,
         "mark_id": markId
       }, { headers });
-      selectedArticle.value.marked_words.push({ 'word': text, 'mark_id': markId });
+      selectedArticle.value.marked_words.push(response.data);
     } catch (err) {
       console.error('新增 selection markedword 失敗:', err);
       return;
