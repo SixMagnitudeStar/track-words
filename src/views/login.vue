@@ -13,6 +13,8 @@
         </button>
         <p v-if="error" style="color:red">{{ error }}</p>
         <p>Don't have an account? <router-link to="/signup">Sign Up</router-link></p>
+        <p>測試用帳號：test@test.com</p>
+        <p>測試用密碼：password</p>
         <p><router-link to="/forgot-password">Forgot Password?</router-link></p>
     <!-- </form> --> 
     </div>
