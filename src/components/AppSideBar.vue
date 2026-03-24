@@ -103,88 +103,24 @@ import { ref} from 'vue'
 import api from '@/axios.js'
 
 import { useAuthStore } from '@/auth.js'
-
+import { useArticleStore } from '@/stores/articleStore.js'
+import { useWordStore } from '@/stores/wordStore.js'
 import { useRouter } from 'vue-router'
 
-
-
-
-
-// ---------- state ----------
-
-
-// const newItem = ref('')
-
-
-// const items = ref([])
-
-
-const showPanel = ref(false)
-
-
-
-
-
-const toggleSideBarIcon = ref(require('../assets/angle-double-left.png'))
-
-
-// const homeIcon = ref('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzNjM2MzYyIgd2lkdGg9IjI0cHgiIGhlaWnaHQ9IjI0cHgiPjxwYXRoIGQ9Ik0xMiA1LjY5TDE3IDEwLjE5VjE4aC0ydj02SDl2Nkg3di03LjgxTDEyIDUuNjlNMTIgM0wyIDEySDd2OGg2di02aDJ2Nmg2di04aDNMMTIgM3oiLz48L3N2Zz4=')
-
-
-
-
-
 // ---------- auth ----------
-
-
 const auth = useAuthStore()
-console.log('AppSideBar: auth.isAdmin value on render:', auth.isAdmin); // Debugging log
-
-
-// const isLoggedIn = computed(() => auth.isLoggedIn)
-
-
+const articleStore = useArticleStore()
+const wordStore = useWordStore()
 const router = useRouter()
 
-
-
-
-
 // ---------- methods ----------
-
-
 function switchToggleSideIcon() {
-
-
   toggleSideBarIcon.value =
-
-
     toggleSideBarIcon.value === require('../assets/angle-double-right.png')
-
-
       ? require('../assets/angle-double-left.png')
-
-
       : require('../assets/angle-double-right.png')
-
-
 }
 
-
-
-
-
-// async function logout() {
-
-
-//   try {
-//     await api.post('/logout')
-//     auth.clearToken()
-//     router.push('/login')
-//   } catch (err) {
-//     console.error(err)
-//   }
-// }
 async function logout() {
   try {
     // 即使後端噴錯，也要繼續執行後續動作
@@ -194,9 +130,12 @@ async function logout() {
   } finally {
     // 放在 finally 確保無論如何都會執行
     auth.clearToken()
+    articleStore.clearStore()
+    wordStore.clearStore()
     router.push('/login')
   }
 }
+
 </script>
 
 
