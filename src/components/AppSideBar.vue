@@ -1,11 +1,4 @@
-
-
-
-
-
 <template>
-
-
   <div id="container">
     <div id="toggle-sidebar-btn-wrapper">
       <img
@@ -59,13 +52,13 @@
           <hr>
           <router-link to="/admin/dashboard" class="router-link-custom">
             <span class="iconBox">
-              <img class="icon" src="@/assets/edit.png" alt="管理員儀表板" /> <!-- Using edit.png as placeholder -->
+              <img class="icon" src="@/assets/edit.png" alt="管理員儀表板" />
               <span>管理員儀表板</span>
             </span>
           </router-link>
           <router-link to="/admin/subscriptions" class="router-link-custom">
             <span class="iconBox">
-              <img class="icon" src="@/assets/plus.png" alt="訂閱管理" /> <!-- Using plus.png as placeholder -->
+              <img class="icon" src="@/assets/plus.png" alt="訂閱管理" />
               <span>訂閱管理</span>
             </span>
           </router-link>
@@ -84,34 +77,26 @@
         </footer>
       </div>
     </transition>
-
   </div>
-
-
 </template>
 
-
-
-
-
 <script setup>
-
-
-import { ref} from 'vue'
-
-
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/axios.js'
-
 import { useAuthStore } from '@/auth.js'
 import { useArticleStore } from '@/stores/articleStore.js'
 import { useWordStore } from '@/stores/wordStore.js'
-import { useRouter } from 'vue-router'
+
+// Assets
+import angleDoubleLeft from '@/assets/angle-double-left.png'
+import angleDoubleRight from '@/assets/angle-double-right.png'
 
 // ---------- state ----------
 const showPanel = ref(false)
-const toggleSideBarIcon = ref(require('../assets/angle-double-left.png'))
+const toggleSideBarIcon = ref(angleDoubleLeft)
 
-// ---------- auth ----------
+// ---------- auth & stores ----------
 const auth = useAuthStore()
 const articleStore = useArticleStore()
 const wordStore = useWordStore()
@@ -120,442 +105,119 @@ const router = useRouter()
 // ---------- methods ----------
 function switchToggleSideIcon() {
   toggleSideBarIcon.value =
-    toggleSideBarIcon.value === require('../assets/angle-double-right.png')
-      ? require('../assets/angle-double-left.png')
-      : require('../assets/angle-double-right.png')
+    toggleSideBarIcon.value === angleDoubleRight
+      ? angleDoubleLeft
+      : angleDoubleRight
 }
 
 async function logout() {
   try {
-    // 即使後端噴錯，也要繼續執行後續動作
     await api.post('/logout')
   } catch (err) {
     console.error('後端登出失敗，但仍將強制清除本地狀態:', err)
   } finally {
-    // 放在 finally 確保無論如何都會執行
     auth.clearToken()
     articleStore.clearStore()
     wordStore.clearStore()
     router.push('/login')
   }
 }
-
 </script>
 
-
-
-
-
-
-
-
 <style scoped>
-
-
 #container {
-
-
   position: absolute;
-
-
   display: block;
-
-
   padding: 1rem;
-
-
   top: 0;
-
-
   left: 0;
-
-
 }
 
-
-
-
-
-
-
-
-#toggle-side-bar-wrapper{
-
-
+#toggle-sidebar-btn-wrapper{
   position: fixed;
-
-
   height: 50px;
-
-
   margin-left: 0;
-
-
   width: 50px;
-
-
-
-
-
 }
-
-
-
-
 
 #toggle-sidebar-btn:hover {
-
-
   background-color:lightgray;
-
-
 }
-
-
-
-
 
 #toggle-sidebar-btn{
-
-
   width: 40px;
-
-
   height: 40px;
-
-
-  display: block; /* 避免 inline img 底部空白 */
-
-
+  display: block;
   border-radius: 10px;
-
-
-
-
-
   background-color: #f4f4f4;
-
-
   cursor: pointer;
-
-
 }
-
-
-
-
-
-/* 展開/收合按鈕 */
-
-
-.toggle-btn {
-
-
-  top: 0;
-
-
-  left: 0;
-
-
-  z-index: 1000;
-
-
-  padding: 0.5rem 1rem;
-
-
-  background-color: #3498db;
-
-
-  color: white;
-
-
-  border: none;
-
-
-  cursor: pointer;
-
-
-}
-
-
-
-
-
-/* 左側滑出的區塊 */
-
 
 .panel {
-
-
   position: relative;
-
-
   top: 50px;
-
-
   left: 0;
-
-
   margin-left: 0;
-
-
   width: 250px;
-
-
   height: 100%;
-
-
   background: #f4f4f4;
-
-
   border-right: 1px solid #ccc;
-
-
   padding: 1rem;
-
-
   box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-
-
   z-index: 999;
-
-
   border-radius: 10px;
-
-
   display: flex;
-
-
   flex-direction: column;
-
-
-  gap: 10px; /* space between buttons */
-
-
+  gap: 10px;
 }
-
-
-
-
 
 .iconBox {
-
-
   display: flex;
-
-
   align-items: center;
-
-
   gap: 15px;
-
-
   padding: 10px;
-
-
   border-radius: 8px;
-
-
   cursor: pointer;
-
-
   transition: background-color 0.2s;
-
-
 }
-
-
-
-
 
 .iconBox:hover {
-
-
   background-color: #e0e0e0;
-
-
 }
-
-
-
-
 
 .icon {
-
-
   width: 24px;
-
-
   height: 24px;
-
-
 }
-
-
-
-
 
 .iconBox span {
-
-
   font-size: 16px;
-
-
   color: #333;
-
-
 }
-
-
-
-
 
 .router-link-custom {
-
-
-
-
-
   text-decoration: none;
-
-
-
-
-
   color: inherit;
-
-
-
-
-
 }
-
-
-
-
-
-
-
-
-
-
 
 .indented-links {
-
-
-
-
-
   padding-left: 20px;
-
-
-
-
-
   margin-left: 10px;
-
-
-
-
-
   border-left: 2px solid #ccc;
-
-
-
-
-
   padding-top: 10px;
-
-
-
-
-
   margin-top: 5px;
-
-
-
-
-
   display: flex;
-
-
-
-
-
   flex-direction: column;
-
-
-
-
-
   gap: 10px;
-
-
-
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* 滑動動畫 */
-
 
 .slide-enter-active,
-
-
 .slide-leave-active {
-
-
   transition: transform 0.7s ease, opacity 0.7s ease;
-
-
 }
-
-
 .slide-enter-from,
-
-
 .slide-leave-to {
-
-
   transform: translateX(-100%);
-
-
   opacity: 0;
-
-
 }
-
-
-
-
-
 </style>
-
