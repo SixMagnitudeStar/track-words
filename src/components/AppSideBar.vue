@@ -107,6 +107,10 @@ import { useArticleStore } from '@/stores/articleStore.js'
 import { useWordStore } from '@/stores/wordStore.js'
 import { useRouter } from 'vue-router'
 
+// ---------- state ----------
+const showPanel = ref(false)
+const toggleSideBarIcon = ref(require('../assets/angle-double-left.png'))
+
 // ---------- auth ----------
 const auth = useAuthStore()
 const articleStore = useArticleStore()
