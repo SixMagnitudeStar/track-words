@@ -8,6 +8,12 @@ export const useWordStore = defineStore('wordStore', {
     loaded: false    // 是否已經抓過資料
   }),
   actions: {
+    // 清空 Store (登出用)
+    clearStore() {
+      this.wordList = []
+      this.loaded = false
+    },
+
     // 抓取標記單字
     async fetchWords(params = {}) {
       if (this.loaded) return  // 已抓過就不再抓
