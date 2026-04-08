@@ -1,15 +1,9 @@
 // stores/article.js
 import { defineStore } from 'pinia'
 import api from '@/axios.js'
-import { useAuthStore } from '@/auth.js'
 import { ref, reactive } from 'vue'
 
 export const useArticleStore = defineStore('articleStore', () => {
-  const auth = useAuthStore()
-  const headers = {
-    Authorization: `Bearer ${auth.token}`
-  }
-
   // --- State ---
   const articles = reactive([])
   const selectedIndex = ref(0)
@@ -27,6 +21,23 @@ export const useArticleStore = defineStore('articleStore', () => {
 
   // --- Actions ---
 
+  // 重置 Store
+  function resetArticles() {
+    articles.length = 0
+    selectedIndex.value = 0
+    selectedArticle.value = {
+      id: 0,
+      title: '',
+      content: '',
+      blocks: [],
+      marked_words: [],
+      note: ''
+    }
+    isEditing.value = false
+    onloading.value = false
+    newArticleID_arr.length = 0
+  }
+
   // 抓取所有文章
   async function loadArticles() {
     if (articles.length > 0) {
@@ -38,7 +49,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     onloading.value = true
 
     try {
-      const response = await api.get('/articles', { headers: headers })
+      const response = await api.get('/articles')
       const fetchedArticles = Array.isArray(response.data) ? response.data : []
       articles.length = 0 // 清空
       articles.push(...fetchedArticles) // 重新填入
@@ -119,13 +130,13 @@ export const useArticleStore = defineStore('articleStore', () => {
       const isNew = newArticleID_arr.includes(body.id)
 
       if (isNew) {
-        response = await api.post('/article', body, { headers: headers })
+        response = await api.post('/article', body)
         const index = newArticleID_arr.indexOf(body.id)
         if (index !== -1) {
           newArticleID_arr.splice(index, 1)
         }
       } else {
-        response = await api.put(`/article/${body.id}`, body, { headers })
+        response = await api.put(`/article/${body.id}`, body)
       }
 
       const resArticle = response.data.article
@@ -166,7 +177,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     }
     
     try {
-      await api.delete(`/article/${idToDelete}`, { headers })
+      await api.delete(`/article/${idToDelete}`)
       console.log(`文章 ID:${idToDelete} 已刪除`)
     } catch (err) {
       console.error('刪除文章失敗:', err.response?.data?.detail || err)
@@ -203,7 +214,7 @@ export const useArticleStore = defineStore('articleStore', () => {
       word: word
     }
     try {
-      const response = await api.post('/markedword', body, { headers });
+      const response = await api.post('/markedword', body);
       selectedArticle.value.marked_words.push(response.data);
       console.log('新增 marked 標記成功');
     } catch (err) {
@@ -225,8 +236,7 @@ export const useArticleStore = defineStore('articleStore', () => {
 
     try {
         await api.delete('/markedword', { 
-            params: { article_id: articleId, word: word },
-            headers: headers 
+            params: { article_id: articleId, word: word }
         });
         const index = selectedArticle.value.marked_words.findIndex(w => w.word === word);
         if (index > -1) {
@@ -257,7 +267,7 @@ export const useArticleStore = defineStore('articleStore', () => {
         await api.patch(`/article-blocks/${block.id}/marked`, { 
           "marked": newMarkedState,
           "mark_id": block.mark_id
-        }, { headers });
+        });
     } catch (err) {
         console.error('更新 Block 標記失敗:', err);
         block.marked = !newMarkedState; // Revert on failure
@@ -272,7 +282,7 @@ export const useArticleStore = defineStore('articleStore', () => {
               "article_id": selectedArticle.value.id, 
               "word": block.text,
               "mark_id": markId
-            }, { headers });
+            });
             selectedArticle.value.marked_words.push(response.data);
         } catch (err) {
             console.error('新增 markedword 失敗:', err);
@@ -280,8 +290,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     } else {
         try {
             await api.delete(`/markedword`, { 
-                params: { article_id: selectedArticle.value.id, word: block.text },
-                headers: headers
+                params: { article_id: selectedArticle.value.id, word: block.text }
             });
             const idx = selectedArticle.value.marked_words.findIndex(w => w.word === block.text);
             if (idx > -1) {
@@ -300,7 +309,7 @@ export const useArticleStore = defineStore('articleStore', () => {
         "article_id": articleId, 
         "word": text,
         "mark_id": markId
-      }, { headers });
+      });
       selectedArticle.value.marked_words.push(response.data);
     } catch (err) {
       console.error('新增 selection markedword 失敗:', err);
@@ -316,7 +325,7 @@ export const useArticleStore = defineStore('articleStore', () => {
         block_ids: blockIds,
         marked: true,
         mark_id: markId
-      }, { headers });
+      });
 
       // Update local state
       blocksToUpdate.forEach(b => {
@@ -336,7 +345,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     
     // 2. Update blocks on backend
     try {
-      await api.patch(`/article/unmark-group/${markId}`, {}, { headers });
+      await api.patch(`/article/unmark-group/${markId}`, {});
       
       // 3. Update local state
       blocksToUnmark.forEach(b => {
@@ -378,7 +387,7 @@ export const useArticleStore = defineStore('articleStore', () => {
         };
     
         try {
-          const response = await api.post('/translate/batch-update', body, { headers });
+          const response = await api.post('/translate/batch-update', body);
           const updatedBatch = response.data; // This is the small batch of newly translated words
           
           // Merge results: keep existing translations, update only the new ones
@@ -408,7 +417,7 @@ export const useArticleStore = defineStore('articleStore', () => {
               note: note
           };
           try {
-              const res = await api.patch('/article/note', body, { headers });
+              const res = await api.patch('/article/note', body);
               articles[selectedIndex.value].note = note;
               selectedArticle.value.note = note;
               console.log('✅ 筆記已儲存:', res.data);
@@ -489,6 +498,7 @@ export const useArticleStore = defineStore('articleStore', () => {
         
         // Actions
         loadArticles,
+        resetArticles,
         selectArticle,
         createNewArticle,
         saveArticle,

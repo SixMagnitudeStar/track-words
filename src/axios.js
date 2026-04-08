@@ -9,9 +9,15 @@ const api = axios.create({
 //request 攔截器：每次請求前帶上 token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')  // 或從 store 取
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    // 排除登入、註冊、重設密碼等不需要 token 的路徑
+    const excludedPaths = ['/login', '/register', '/signup', '/forgot-password', '/reset-password']
+    const isExcluded = excludedPaths.some(path => config.url.includes(path))
+
+    if (!isExcluded) {
+      const token = localStorage.getItem('token')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
     }
     return config
   },
@@ -22,7 +28,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.reponse?.status === 401){
+    if (err.response?.status === 401){
       const auth = useAuthStore()
       auth.clearToken()
       localStorage.removeItem('token')
