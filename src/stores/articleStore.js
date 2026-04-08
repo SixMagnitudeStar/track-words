@@ -128,17 +128,17 @@ export const useArticleStore = defineStore('articleStore', () => {
         response = await api.put(`/article/${body.id}`, body, { headers })
       }
 
-      alert('文章儲存成功!')
       const resArticle = response.data.article
       
       // 更新 store state
       articles[selectedIndex.value] = { ...resArticle }
       Object.assign(selectedArticle.value, resArticle)
       isEditing.value = false
+      return { success: true, message: '文章儲存成功' }
 
     } catch (err) {
       console.error('文章儲存失敗:', err.response?.data?.detail || err)
-      alert('文章儲存失敗')
+      throw err
     } finally{
       onloading.value = false;
       
@@ -358,33 +358,45 @@ export const useArticleStore = defineStore('articleStore', () => {
   }
     
       async function translateMarkedWords() {
-        const wordsToTranslate = selectedArticle.value.marked_words;
-        if (!wordsToTranslate || wordsToTranslate.length === 0) {
+        const allWords = selectedArticle.value.marked_words;
+        if (!allWords || allWords.length === 0) {
           console.log("No marked words to translate.");
           return;
         }
-        alert('翻譯:' + JSON.stringify(selectedArticle.value.marked_words));
-        console.log('Translating marked words:', wordsToTranslate);
+
+        // Only choose words that haven't been translated yet
+        const wordsToTranslate = allWords.filter(w => !w.translation || w.translation.trim() === '');
+        
+        if (wordsToTranslate.length === 0) {
+          console.log("All marked words are already translated.");
+          return true;
+        }
+
+        console.log('Translating new marked words:', wordsToTranslate);
         const body = {
           words: wordsToTranslate.map(w => ({ id: w.id, word: w.word }))
         };
     
         try {
           const response = await api.post('/translate/batch-update', body, { headers });
-          const updatedWords = response.data;
+          const updatedBatch = response.data; // This is the small batch of newly translated words
           
-          // Replace the old marked_words with the updated ones
-          selectedArticle.value.marked_words = updatedWords;
+          // Merge results: keep existing translations, update only the new ones
+          const updatedWordsList = allWords.map(originalWord => {
+            const newlyUpdated = updatedBatch.find(u => u.id === originalWord.id);
+            return newlyUpdated ? newlyUpdated : originalWord;
+          });
+
+          selectedArticle.value.marked_words = updatedWordsList;
           if (articles[selectedIndex.value]) {
-            articles[selectedIndex.value].marked_words = updatedWords;
+            articles[selectedIndex.value].marked_words = updatedWordsList;
           }
           
           console.log('Translations updated successfully.');
-          return true; // Indicate success
+          return true;
         } catch (err) {
           console.error('Failed to translate marked words:', err.response?.data?.detail || err);
-          alert('翻譯失敗，請稍後再試。');
-          return false; // Indicate failure
+          return false; // UI handling is moved to the component (articleReading.vue)
         }
       }
     
