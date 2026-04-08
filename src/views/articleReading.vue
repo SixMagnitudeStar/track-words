@@ -122,10 +122,15 @@
           <div class="marked-word-list">
             <ul>
               <li v-for="(word, index) in selectedArticle.marked_words" :key="index">
-                <div class="parallel-div">
-                  <img @click="articleStore.deleteMarkedWord(word)" class="remove-marked-word-icon" src="../assets/bin2.png">
-                  <span>{{word.word}}</span>
-                  <span v-if="showTranslations && word.translation" class="translation-text">: {{ word.translation }}</span>
+                <div class="word-item-container">
+                  <div class="action-icons">
+                    <img @click="articleStore.deleteMarkedWord(word)" class="icon-btn remove-icon" src="../assets/bin2.png" title="刪除單字">
+                    <span @click="speak(word.word)" class="speaker-icon" title="聆聽發音">🔊</span>
+                  </div>
+                  <div class="word-text">
+                    <span class="word-en">{{word.word}}</span>
+                    <span v-if="showTranslations && word.translation" class="translation-text">: {{ word.translation }}</span>
+                  </div>
                 </div>
               </li>
             </ul>
@@ -139,10 +144,22 @@
         <div class="status">{{ noteSaveStatus }}</div>
       </details>
     </div>
+
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div v-if="toast.show" 
+           :class="['toast-container', toast.type === 'success' ? 'toast-success' : 'toast-error']">
+        <div class="toast-content">
+          <span v-if="toast.type === 'success'" class="toast-icon">✓</span>
+          <span v-else class="toast-icon">✕</span>
+          <span class="toast-message">{{ toast.message }}</span>
+        </div>
+      </div>
+    </Transition>
   </div> </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick, defineOptions } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, defineOptions, reactive } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useArticleStore } from '@/stores/articleStore.js'
 
@@ -175,6 +192,21 @@ const editableTitle = ref(null)
 const editorRef = ref(null)
 const noteArea = ref(null)
 
+const toast = reactive({
+  show: false,
+  message: '',
+  type: 'success'
+})
+
+function showToast(message, type = 'success') {
+  toast.message = message
+  toast.type = type
+  toast.show = true
+  setTimeout(() => {
+    toast.show = false
+  }, 3000)
+}
+
 const hasTranslations = computed(() => {
   return selectedArticle.value.marked_words.some(word => word.translation && word.translation.trim() !== '');
 });
@@ -190,6 +222,13 @@ const predefinedTopics = ref(['History', 'Health', 'Education', 'Lifestyle', 'Tr
 const selectedTopic = ref('')
 const wordCountOptions = ref([500, 1000, 1500, 2000]);
 const selectedWordCount = ref(500);
+
+const speak = (text) => {
+  if (!text) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-US';
+  window.speechSynthesis.speak(utterance);
+};
 
 
 // --- Lifecycle Hooks ---
@@ -292,7 +331,10 @@ async function toggleTranslation() {
     if (success) {
       translated.value = true;
       showTranslations.value = true;
+      showToast('翻譯完成！')
     }
+  } catch (error) {
+    showToast('翻譯失敗，請稍後再試。', 'error')
   } finally {
     isTranslating.value = false;
   }
@@ -428,13 +470,22 @@ async function handleSaveArticle() {
   if (isEditing.value && editorRef.value) {
     blocksToSave = parseArticleText.value;
   }
-  await articleStore.saveArticle(blocksToSave);
+  
+  try {
+    const result = await articleStore.saveArticle(blocksToSave);
+    if (result && result.success) {
+      showToast(result.message);
+    }
+  } catch (error) {
+    showToast('文章儲存失敗', 'error');
+  }
 }
 
 function handleDeleteArticle() {
   const title = selectedArticle.value.title || '這篇文章';
   if (window.confirm(`確定要刪除「${title}」嗎？此動作無法復原。`)) {
     articleStore.deleteArticle();
+    showToast('文章已刪除');
   }
 }
 
@@ -691,13 +742,50 @@ body.articleReading-bg {
   text-align: left;
 }
 
-.remove-marked-word-icon{
-  margin: 2px 10px;
-  cursor: pointer;
+.word-item-container {
+  display: flex;
+  align-items: flex-start;
+  padding: 4px 0;
 }
 
-.remove-marked-word-icon:hover{
-  background-color: #e0e0e0;
+.action-icons {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-right: 12px;
+  margin-top: 2px;
+  align-items: center;
+}
+
+.icon-btn {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.speaker-icon {
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.icon-btn:hover, .speaker-icon:hover {
+  filter: brightness(0.8);
+  transform: scale(1.1);
+}
+
+.word-text {
+  flex-grow: 1;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.word-en {
+  font-weight: 500;
 }
 
 .translation-bar {
@@ -1005,5 +1093,56 @@ input:checked + .slider:before {
 
 .cancel-confirmation button:hover {
   background-color: #ff3333;
+}
+
+/* Toast Styles */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 12px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+}
+
+.toast-success {
+  background-color: #4caf50;
+  color: white;
+}
+
+.toast-error {
+  background-color: #f44336;
+  color: white;
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.toast-icon {
+  font-size: 1.2em;
+}
+
+/* Toast Animation */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translate(-50%, -20px);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -20px);
 }
 </style>
