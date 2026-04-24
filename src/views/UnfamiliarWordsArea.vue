@@ -40,24 +40,20 @@
 
       <!-- 切換顯示模式：列表 或 A-Z -->
       <div class="mode-toggle">
-        <!-- inline 改變 viewMode（template 裡自動 unwrap） -->
+        <button :class="{ active: !showTranslations }" @click="showTranslations = !showTranslations">{{ showTranslations ? '隱藏翻譯' : '顯示翻譯' }}</button>
         <button :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">列表</button>
         <button :class="{ active: viewMode === 'az' }" @click="viewMode = 'az'">A-Z</button>
       </div>
     </div>
 
     <!-- ===== 單字清單（列表模式） ===== -->
-    <!--
-      使用 transition-group Add/Remove 項目的動畫效果
-      - name="slide" 會對應 style 中的 .slide-*-* 動畫 class
-      - tag="div" 指定輸出元素為 div（transition-group 預設會產生包裹元素）
-      - v-if="viewMode === 'list'"：只在列表模式時渲染 transition-group
-      - :key 使用 word.text（注意：若文字可能重複，建議改用唯一 id）
-    -->
     <transition-group v-if="viewMode === 'list'" name="slide" tag="div" class="word-list">
       <div class="word-item" v-for="word in filteredWords" :key="word.word">
         <div class="word-main">
-          <span class="word-text">{{ word.word }}</span>
+          <span class="word-text">
+            {{ word.word }}
+            <span v-if="showTranslations && word.translation" class="translation-text">: {{ word.translation }}</span>
+          </span>
           <span class="date-added">{{ formatDate(word.marked_time) }}</span>
         </div>
 
@@ -88,6 +84,7 @@
             :key="word.id"
           >
             {{ word.word }}
+            <span v-if="word.translation" class="translation-text">: {{ word.translation }}</span>
           </li>
         </ul>
       </div>
@@ -137,6 +134,7 @@ const searchQuery = ref('')           // 搜尋字串
 const sortOption = ref('recent')      // 排序方式：'recent' or 'alphabetical'
 const filterOption = ref('all')       // 篩選：'all','familiar','mistake','today','recent7','recent30','recent90'
 const viewMode = ref('list')          // 顯示模式：'list' / 'az'
+const showTranslations = ref(true)    // 是否顯示翻譯
 
 
 const store = useWordStore()

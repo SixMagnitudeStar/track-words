@@ -53,16 +53,14 @@ export const useArticleStore = defineStore('articleStore', () => {
     }
   }
 
-  // 選擇文章
-  function selectArticle(index) {
+  // 選擇文章 (支援非同步載入完整內容)
+  async function selectArticle(index) {
     if (index < 0 || index >= articles.length) {
       console.warn(`selectArticle: index ${index} out of bounds.`)
-      // 可以選擇清空或選擇第一個
       if (articles.length > 0) {
         selectedIndex.value = 0;
         Object.assign(selectedArticle.value, articles[0]);
       } else {
-        // 重置為初始狀態
         selectedIndex.value = -1;
         Object.assign(selectedArticle.value, { id: 0, title: '', content: '', blocks: [], marked_words: [], note: '' });
       }
@@ -70,6 +68,21 @@ export const useArticleStore = defineStore('articleStore', () => {
     }
 
     selectedIndex.value = index
+    const article = articles[index]
+    
+    // 如果這不是新文章，且還沒有載入 blocks，則從後端抓取完整內容
+    if (!newArticleID_arr.includes(article.id) && (!article.blocks || article.blocks.length === 0)) {
+      onloading.value = true
+      try {
+        const response = await api.get(`/article/${article.id}`, { headers })
+        articles[index] = response.data
+      } catch (error) {
+        console.error('載入完整文章失敗:', error)
+      } finally {
+        onloading.value = false
+      }
+    }
+
     Object.assign(selectedArticle.value, articles[index])
 
     if (newArticleID_arr.includes(selectedArticle.value.id)) {
@@ -90,58 +103,81 @@ export const useArticleStore = defineStore('articleStore', () => {
       title: '',
       content: '',
       blocks: [],
-      marked_words: []
+      marked_words: [],
+      note: ''
     }
     articles.unshift(newArticle)
     selectArticle(0)
   }
 
-  // 儲存文章 (新增/更新)
+  // 儲存文章 (新增/更新，支援分段傳輸)
   async function saveArticle(parsedBlocks) {
-    // 更新 blocks
+    // 更新本地 blocks
     if (parsedBlocks) {
       selectedArticle.value.blocks = parsedBlocks
       articles[selectedIndex.value].blocks = parsedBlocks
     }
 
-    const body = {
+    const metadataBody = {
       id: selectedArticle.value.id,
       title: selectedArticle.value.title,
       content: selectedArticle.value.content,
       note: selectedArticle.value.note || '',
-      blocks: selectedArticle.value.blocks || []
+      tags_css: [] // 配合後端 schema
     }
 
     try {
       onloading.value = true;
+      let articleId = selectedArticle.value.id
+      const isNew = newArticleID_arr.includes(articleId)
 
-      let response
-      const isNew = newArticleID_arr.includes(body.id)
-
+      // 1. 儲存/更新文章元數據
       if (isNew) {
-        response = await api.post('/article', body, { headers: headers })
-        const index = newArticleID_arr.indexOf(body.id)
-        if (index !== -1) {
-          newArticleID_arr.splice(index, 1)
-        }
+        // 新文章：先建立文章主體 (不帶 blocks 以節省記憶體)
+        const response = await api.post('/article', { ...metadataBody, blocks: [] }, { headers })
+        const resArticle = response.data.article
+        articleId = resArticle.id
+        
+        // 更新本地 ID 與狀態
+        const oldId = selectedArticle.value.id
+        const index = newArticleID_arr.indexOf(oldId)
+        if (index !== -1) newArticleID_arr.splice(index, 1)
+        
+        selectedArticle.value.id = articleId
+        articles[selectedIndex.value].id = articleId
       } else {
-        response = await api.put(`/article/${body.id}`, body, { headers })
+        // 舊文章：更新元數據
+        await api.put(`/article/${articleId}`, metadataBody, { headers })
+        // 更新後端 blocks 前先清空舊的
+        if (parsedBlocks) {
+          await api.delete(`/article/${articleId}/blocks`, { headers })
+        }
       }
 
-      alert('文章儲存成功!')
-      const resArticle = response.data.article
+      // 2. 分段儲存 blocks (如果有 parsedBlocks)
+      if (parsedBlocks && parsedBlocks.length > 0) {
+        const chunkSize = 500
+        for (let i = 0; i < parsedBlocks.length; i += chunkSize) {
+          const chunk = parsedBlocks.slice(i, i + chunkSize)
+          await api.post(`/article/${articleId}/blocks/chunk`, { blocks: chunk }, { headers })
+          console.log(`已儲存 blocks: ${Math.min(i + chunkSize, parsedBlocks.length)} / ${parsedBlocks.length}`)
+        }
+      }
+
+      // 3. 重新載入該文章完整內容以確保同步
+      const finalRes = await api.get(`/article/${articleId}`, { headers })
+      const fullArticle = finalRes.data
+      articles[selectedIndex.value] = { ...fullArticle }
+      Object.assign(selectedArticle.value, fullArticle)
       
-      // 更新 store state
-      articles[selectedIndex.value] = { ...resArticle }
-      Object.assign(selectedArticle.value, resArticle)
+      alert('文章儲存成功!')
       isEditing.value = false
 
     } catch (err) {
       console.error('文章儲存失敗:', err.response?.data?.detail || err)
       alert('文章儲存失敗')
-    } finally{
+    } finally {
       onloading.value = false;
-      
     }
   }
 
