@@ -1,15 +1,9 @@
 // stores/article.js
 import { defineStore } from 'pinia'
 import api from '@/axios.js'
-import { useAuthStore } from '@/auth.js'
 import { ref, reactive } from 'vue'
 
 export const useArticleStore = defineStore('articleStore', () => {
-  const auth = useAuthStore()
-  const headers = {
-    Authorization: `Bearer ${auth.token}`
-  }
-
   // --- State ---
   const articles = reactive([])
   const selectedIndex = ref(0)
@@ -27,6 +21,23 @@ export const useArticleStore = defineStore('articleStore', () => {
 
   // --- Actions ---
 
+  // 重置 Store
+  function resetArticles() {
+    articles.length = 0
+    selectedIndex.value = 0
+    selectedArticle.value = {
+      id: 0,
+      title: '',
+      content: '',
+      blocks: [],
+      marked_words: [],
+      note: ''
+    }
+    isEditing.value = false
+    onloading.value = false
+    newArticleID_arr.length = 0
+  }
+
   // 抓取所有文章
   async function loadArticles() {
     if (articles.length > 0) {
@@ -38,7 +49,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     onloading.value = true
 
     try {
-      const response = await api.get('/articles', { headers: headers })
+      const response = await api.get('/articles')
       const fetchedArticles = Array.isArray(response.data) ? response.data : []
       articles.length = 0 // 清空
       articles.push(...fetchedArticles) // 重新填入
@@ -172,6 +183,7 @@ export const useArticleStore = defineStore('articleStore', () => {
       
       alert('文章儲存成功!')
       isEditing.value = false
+      return { success: true, message: '文章儲存成功' }
 
     } catch (err) {
       console.error('文章儲存失敗:', err.response?.data?.detail || err)
@@ -202,7 +214,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     }
     
     try {
-      await api.delete(`/article/${idToDelete}`, { headers })
+      await api.delete(`/article/${idToDelete}`)
       console.log(`文章 ID:${idToDelete} 已刪除`)
     } catch (err) {
       console.error('刪除文章失敗:', err.response?.data?.detail || err)
@@ -239,7 +251,7 @@ export const useArticleStore = defineStore('articleStore', () => {
       word: word
     }
     try {
-      const response = await api.post('/markedword', body, { headers });
+      const response = await api.post('/markedword', body);
       selectedArticle.value.marked_words.push(response.data);
       console.log('新增 marked 標記成功');
     } catch (err) {
@@ -261,8 +273,7 @@ export const useArticleStore = defineStore('articleStore', () => {
 
     try {
         await api.delete('/markedword', { 
-            params: { article_id: articleId, word: word },
-            headers: headers 
+            params: { article_id: articleId, word: word }
         });
         const index = selectedArticle.value.marked_words.findIndex(w => w.word === word);
         if (index > -1) {
@@ -293,7 +304,7 @@ export const useArticleStore = defineStore('articleStore', () => {
         await api.patch(`/article-blocks/${block.id}/marked`, { 
           "marked": newMarkedState,
           "mark_id": block.mark_id
-        }, { headers });
+        });
     } catch (err) {
         console.error('更新 Block 標記失敗:', err);
         block.marked = !newMarkedState; // Revert on failure
@@ -308,7 +319,7 @@ export const useArticleStore = defineStore('articleStore', () => {
               "article_id": selectedArticle.value.id, 
               "word": block.text,
               "mark_id": markId
-            }, { headers });
+            });
             selectedArticle.value.marked_words.push(response.data);
         } catch (err) {
             console.error('新增 markedword 失敗:', err);
@@ -316,8 +327,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     } else {
         try {
             await api.delete(`/markedword`, { 
-                params: { article_id: selectedArticle.value.id, word: block.text },
-                headers: headers
+                params: { article_id: selectedArticle.value.id, word: block.text }
             });
             const idx = selectedArticle.value.marked_words.findIndex(w => w.word === block.text);
             if (idx > -1) {
@@ -336,7 +346,7 @@ export const useArticleStore = defineStore('articleStore', () => {
         "article_id": articleId, 
         "word": text,
         "mark_id": markId
-      }, { headers });
+      });
       selectedArticle.value.marked_words.push(response.data);
     } catch (err) {
       console.error('新增 selection markedword 失敗:', err);
@@ -352,7 +362,7 @@ export const useArticleStore = defineStore('articleStore', () => {
         block_ids: blockIds,
         marked: true,
         mark_id: markId
-      }, { headers });
+      });
 
       // Update local state
       blocksToUpdate.forEach(b => {
@@ -372,7 +382,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     
     // 2. Update blocks on backend
     try {
-      await api.patch(`/article/unmark-group/${markId}`, {}, { headers });
+      await api.patch(`/article/unmark-group/${markId}`, {});
       
       // 3. Update local state
       blocksToUnmark.forEach(b => {
@@ -394,33 +404,45 @@ export const useArticleStore = defineStore('articleStore', () => {
   }
     
       async function translateMarkedWords() {
-        const wordsToTranslate = selectedArticle.value.marked_words;
-        if (!wordsToTranslate || wordsToTranslate.length === 0) {
+        const allWords = selectedArticle.value.marked_words;
+        if (!allWords || allWords.length === 0) {
           console.log("No marked words to translate.");
           return;
         }
-        alert('翻譯:' + JSON.stringify(selectedArticle.value.marked_words));
-        console.log('Translating marked words:', wordsToTranslate);
+
+        // Only choose words that haven't been translated yet
+        const wordsToTranslate = allWords.filter(w => !w.translation || w.translation.trim() === '');
+        
+        if (wordsToTranslate.length === 0) {
+          console.log("All marked words are already translated.");
+          return true;
+        }
+
+        console.log('Translating new marked words:', wordsToTranslate);
         const body = {
           words: wordsToTranslate.map(w => ({ id: w.id, word: w.word }))
         };
     
         try {
-          const response = await api.post('/translate/batch-update', body, { headers });
-          const updatedWords = response.data;
+          const response = await api.post('/translate/batch-update', body);
+          const updatedBatch = response.data; // This is the small batch of newly translated words
           
-          // Replace the old marked_words with the updated ones
-          selectedArticle.value.marked_words = updatedWords;
+          // Merge results: keep existing translations, update only the new ones
+          const updatedWordsList = allWords.map(originalWord => {
+            const newlyUpdated = updatedBatch.find(u => u.id === originalWord.id);
+            return newlyUpdated ? newlyUpdated : originalWord;
+          });
+
+          selectedArticle.value.marked_words = updatedWordsList;
           if (articles[selectedIndex.value]) {
-            articles[selectedIndex.value].marked_words = updatedWords;
+            articles[selectedIndex.value].marked_words = updatedWordsList;
           }
           
           console.log('Translations updated successfully.');
-          return true; // Indicate success
+          return true;
         } catch (err) {
           console.error('Failed to translate marked words:', err.response?.data?.detail || err);
-          alert('翻譯失敗，請稍後再試。');
-          return false; // Indicate failure
+          return false; // UI handling is moved to the component (articleReading.vue)
         }
       }
     
@@ -432,7 +454,7 @@ export const useArticleStore = defineStore('articleStore', () => {
               note: note
           };
           try {
-              const res = await api.patch('/article/note', body, { headers });
+              const res = await api.patch('/article/note', body);
               articles[selectedIndex.value].note = note;
               selectedArticle.value.note = note;
               console.log('✅ 筆記已儲存:', res.data);
@@ -513,6 +535,7 @@ export const useArticleStore = defineStore('articleStore', () => {
         
         // Actions
         loadArticles,
+        resetArticles,
         selectArticle,
         createNewArticle,
         saveArticle,
