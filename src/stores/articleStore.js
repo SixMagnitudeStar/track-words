@@ -85,7 +85,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     if (!newArticleID_arr.includes(article.id) && (!article.blocks || article.blocks.length === 0)) {
       onloading.value = true
       try {
-        const response = await api.get(`/article/${article.id}`, { headers })
+        const response = await api.get(`/article/${article.id}`)
         articles[index] = response.data
       } catch (error) {
         console.error('載入完整文章失敗:', error)
@@ -145,7 +145,7 @@ export const useArticleStore = defineStore('articleStore', () => {
       // 1. 儲存/更新文章元數據
       if (isNew) {
         // 新文章：先建立文章主體 (不帶 blocks 以節省記憶體)
-        const response = await api.post('/article', { ...metadataBody, blocks: [] }, { headers })
+        const response = await api.post('/article', { ...metadataBody, blocks: [] })
         const resArticle = response.data.article
         articleId = resArticle.id
         
@@ -158,10 +158,10 @@ export const useArticleStore = defineStore('articleStore', () => {
         articles[selectedIndex.value].id = articleId
       } else {
         // 舊文章：更新元數據
-        await api.put(`/article/${articleId}`, metadataBody, { headers })
+        await api.put(`/article/${articleId}`, metadataBody)
         // 更新後端 blocks 前先清空舊的
         if (parsedBlocks) {
-          await api.delete(`/article/${articleId}/blocks`, { headers })
+          await api.delete(`/article/${articleId}/blocks`)
         }
       }
 
@@ -170,13 +170,13 @@ export const useArticleStore = defineStore('articleStore', () => {
         const chunkSize = 500
         for (let i = 0; i < parsedBlocks.length; i += chunkSize) {
           const chunk = parsedBlocks.slice(i, i + chunkSize)
-          await api.post(`/article/${articleId}/blocks/chunk`, { blocks: chunk }, { headers })
+          await api.post(`/article/${articleId}/blocks/chunk`, { blocks: chunk })
           console.log(`已儲存 blocks: ${Math.min(i + chunkSize, parsedBlocks.length)} / ${parsedBlocks.length}`)
         }
       }
 
       // 3. 重新載入該文章完整內容以確保同步
-      const finalRes = await api.get(`/article/${articleId}`, { headers })
+      const finalRes = await api.get(`/article/${articleId}`)
       const fullArticle = finalRes.data
       articles[selectedIndex.value] = { ...fullArticle }
       Object.assign(selectedArticle.value, fullArticle)
