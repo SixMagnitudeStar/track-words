@@ -31,7 +31,7 @@
 
     <div v-if="isTopicModalVisible" class="modal-overlay" @click.self="closeTopicModal">
       <div class="modal-content">
-        <h3>選擇文章主題與字數</h3>
+        <h3>選擇文章主題、語言與字數</h3>
         <div class="topic-buttons">
           <button v-for="topic in predefinedTopics" :key="topic" @click="selectPredefinedTopic(topic)">{{ topic }}</button>
         </div>
@@ -39,12 +39,25 @@
           <p>或輸入自訂主題：</p>
           <input type="text" v-model="selectedTopic" placeholder="例如：AI" @keyup.enter="handleGenerateArticle"/>
         </div>
-        <div class="word-count-selector">
-          <label for="word-count">選擇文章字數：</label>
-          <select id="word-count" v-model="selectedWordCount">
-            <option v-for="count in wordCountOptions" :key="count" :value="count">{{ count }} 字</option>
-          </select>
+        
+        <div class="selector-group">
+          <div class="selector-item">
+            <label for="article-lang">選擇語言：</label>
+            <select id="article-lang" v-model="selectedArticleLanguage">
+              <option value="English">English</option>
+              <option value="Japanese">Japanese</option>
+              <option value="Korean">Korean</option>
+              <option value="Traditional Chinese">繁體中文</option>
+            </select>
+          </div>
+          <div class="selector-item">
+            <label for="word-count">文章字數：</label>
+            <select id="word-count" v-model="selectedWordCount">
+              <option v-for="count in wordCountOptions" :key="count" :value="count">{{ count }} 字</option>
+            </select>
+          </div>
         </div>
+
         <div class="modal-actions">
           <button @click="handleGenerateArticle" :disabled="!selectedTopic.trim()">生成文章</button>
           <button @click="closeTopicModal">取消</button>
@@ -218,15 +231,28 @@ const markedWordsCount = computed(() => {
 
 // --- Topic Modal State ---
 const isTopicModalVisible = ref(false)
-const predefinedTopics = ref(['History', 'Health', 'Education', 'Lifestyle', 'Travel', 'Technology', 'Science', 'Finance', 'Sports'])
+const predefinedTopics = ref(['History', 'Health', 'Education', 'Lifestyle', 'Travel', 'Technology', 'Science', 'Finance', 'Sports', 'Environment', 'Culture'])
 const selectedTopic = ref('')
 const wordCountOptions = ref([500, 1000, 1500, 2000]);
 const selectedWordCount = ref(500);
+const selectedArticleLanguage = ref('English');
 
 const speak = (text) => {
   if (!text) return;
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'en-US';
+  
+  // 根據後端回傳的 language 欄位動態切換 TTS 語系
+  const langMap = {
+    'en': 'en-US',
+    'ja': 'ja-JP',
+    'ko': 'ko-KR',
+    'zh': 'zh-TW'
+  };
+  
+  const targetLang = selectedArticle.value?.language || 'en';
+  utterance.lang = langMap[targetLang] || 'en-US';
+  
+  console.log(`播放語系: ${utterance.lang}, 文字: ${text}`);
   window.speechSynthesis.speak(utterance);
 };
 
@@ -390,9 +416,10 @@ function handleGenerateArticle() {
 }
 
 
-// 判斷是不是文字
+// 判斷是不是文字 (支援英文、日文、韓文、中文)
 function isWord(str) {
-  return /^[a-zA-Z0-9]+$/.test(str)
+  // 包含英數字、日文(平假名、片假名、漢字)、韓文、中文
+  return /^[a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF]+$/.test(str)
 }
 
 // 解析文章編輯器的內容，拆成 blocks
@@ -404,7 +431,8 @@ const parseArticleText = computed(() => {
 
     function processNode(node, parentStyle = '') {
       if (node.nodeType === Node.TEXT_NODE) {
-        const words = node.textContent.match(/\n|\s+|\w+|[^\s\w]/g) || []
+        // 更新正則：除了空白和換行，將英數字連續抓取，並將中日韓字元單獨抓取
+        const words = node.textContent.match(/\n|\s+|[a-zA-Z0-9]+|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF]|[^\s\w]/g) || []
         for (const word of words) {
           let text_type = 'punctuation'
           if (word === '\n') text_type = 'paragraph'
@@ -931,14 +959,32 @@ body.articleReading-bg {
     gap: 10px;
 }
 
-.word-count-selector label {
-    color: #555;
+.selector-group {
+  display: flex;
+  justify-content: space-around;
+  gap: 20px;
+  margin-bottom: 25px;
 }
 
-.word-count-selector select {
-    padding: 8px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
+.selector-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.selector-item label {
+  font-size: 14px;
+  color: #666;
+}
+
+.selector-item select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  cursor: pointer;
+  min-width: 120px;
 }
 
 .modal-actions {

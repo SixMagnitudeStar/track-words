@@ -67,20 +67,17 @@ export const useArticleStore = defineStore('articleStore', () => {
   // 選擇文章 (支援非同步載入完整內容)
   async function selectArticle(index) {
     if (index < 0 || index >= articles.length) {
-      console.warn(`selectArticle: index ${index} out of bounds.`)
-      if (articles.length > 0) {
-        selectedIndex.value = 0;
-        Object.assign(selectedArticle.value, articles[0]);
-      } else {
-        selectedIndex.value = -1;
-        Object.assign(selectedArticle.value, { id: 0, title: '', content: '', blocks: [], marked_words: [], note: '' });
-      }
+      selectedIndex.value = -1;
+      resetSelectedArticle();
       return;
     }
 
     selectedIndex.value = index
     const article = articles[index]
     
+    // --- 關鍵修復：先重置 selectedArticle，避免舊文章的屬性（如 blocks）殘留在 UI 上 ---
+    resetSelectedArticle();
+
     // 如果這不是新文章，且還沒有載入 blocks，則從後端抓取完整內容
     if (!newArticleID_arr.includes(article.id) && (!article.blocks || article.blocks.length === 0)) {
       onloading.value = true
@@ -103,9 +100,23 @@ export const useArticleStore = defineStore('articleStore', () => {
     }
   }
 
+  // 輔助函數：清空選中文章的狀態
+  function resetSelectedArticle() {
+    Object.assign(selectedArticle.value, {
+      id: 0,
+      title: '',
+      content: '',
+      blocks: [],
+      marked_words: [],
+      note: '',
+      language: 'en'
+    });
+  }
+
   // 建立新文章 (本地)
   function createNewArticle() {
-    const newArticle_id = articles.length === 0 ? 1 : articles[0].id + 1
+    // 使用 Date.now() 確保本地臨時 ID 唯一，避免 key 衝突導致 UI 渲染錯誤
+    const newArticle_id = Date.now() 
     newArticleID_arr.push(newArticle_id)
     isEditing.value = true
 
@@ -115,7 +126,8 @@ export const useArticleStore = defineStore('articleStore', () => {
       content: '',
       blocks: [],
       marked_words: [],
-      note: ''
+      note: '',
+      language: 'en'
     }
     articles.unshift(newArticle)
     selectArticle(0)
@@ -466,14 +478,15 @@ export const useArticleStore = defineStore('articleStore', () => {
       }
       
       // --- 隨機文章 ---
-      async function fetchRandomArticle(topic, wordLimit = 500) {
+      async function fetchRandomArticle(topic, wordLimit = 500, language = 'English') {
           onloading.value = true;
           try {
               // 1. 使用 axios (api.get)，params 會自動處理 URL 編碼，不需手動 encodeURIComponent
               const res = await api.get('/essay', {
                   params: {
                       topic: topic,
-                      word_limit: wordLimit
+                      word_limit: wordLimit,
+                      language: language
                   }
               });
 
@@ -487,7 +500,10 @@ export const useArticleStore = defineStore('articleStore', () => {
                   title: data.topic || topic || "無標題",
                   content: data.essay || data.text || "",
                   blocks: [],
-                  note: data.note || ""
+                  note: data.note || "",
+                  language: language.toLowerCase().includes('english') ? 'en' : 
+                            language.toLowerCase().includes('japanese') ? 'ja' :
+                            language.toLowerCase().includes('korean') ? 'ko' : 'en'
               };
               
               newArticleID_arr.push(newArticle.id);
