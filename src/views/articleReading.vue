@@ -101,9 +101,16 @@
             :class="{ word: block.text_type==='word', active: block.marked, paragraph: block.text_type==='paragraph' }"
             :data-index="index"
             @click="handleBlockClick(block, $event)"
+            @mouseenter="handleMouseEnter(block, $event)"
+            @mouseleave="handleMouseLeave"
             v-html="block.text"
           ></span>
         </template>
+      </div>
+
+      <!-- Custom Translation Tooltip -->
+      <div v-if="hoveredTranslation" class="translation-tooltip" :style="tooltipPosition">
+        {{ hoveredTranslation }}
       </div>
       
       <div v-if="showCancelConfirmation" class="cancel-confirmation" :style="confirmationPos" @mouseleave="showCancelConfirmation = false">
@@ -200,6 +207,9 @@ const isTranslating = ref(false)
 const inputWord = ref('')
 const noteSaveStatus = ref('')
 const saveTimer = ref(null)
+
+const hoveredTranslation = ref('')
+const tooltipPosition = ref({ top: '0px', left: '0px' })
 
 const editableTitle = ref(null)
 const editorRef = ref(null)
@@ -422,6 +432,29 @@ function isWord(str) {
   return /^[a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF]+$/.test(str)
 }
 
+// 取得單字的翻譯 (用於滑鼠懸停顯示)
+function getWordTranslation(block) {
+  if (!block.marked || !block.mark_id || !selectedArticle.value?.marked_words) return '';
+  const wordObj = selectedArticle.value.marked_words.find(w => w.mark_id === block.mark_id);
+  return wordObj?.translation || '';
+}
+
+function handleMouseEnter(block, event) {
+  const translation = getWordTranslation(block);
+  if (translation) {
+    hoveredTranslation.value = translation;
+    const rect = event.target.getBoundingClientRect();
+    tooltipPosition.value = {
+      top: `${rect.top + window.scrollY - 40}px`,
+      left: `${rect.left + window.scrollX + rect.width / 2}px`
+    };
+  }
+}
+
+function handleMouseLeave() {
+  hoveredTranslation.value = '';
+}
+
 // 解析文章編輯器的內容，拆成 blocks
 const parseArticleText = computed(() => {
     const blocks = []
@@ -519,15 +552,33 @@ function handleDeleteArticle() {
 
 // 筆記自動儲存
 function onNoteInput() {
-  clearTimeout(saveTimer.value)
+  if (saveTimer.value) {
+    clearTimeout(saveTimer.value)
+  }
   noteSaveStatus.value = '輸入中...'
+  
   saveTimer.value = setTimeout(async () => {
     noteSaveStatus.value = '💾 儲存中...'
     const newNote = noteArea.value.innerText;
+    
+    // 紀錄開始時間，確保「儲存中」至少顯示 800ms
+    const startTime = Date.now();
     const status = await articleStore.saveNote(newNote);
+    const elapsed = Date.now() - startTime;
+    
+    if (elapsed < 800) {
+      await new Promise(resolve => setTimeout(resolve, 800 - elapsed));
+    }
+    
     noteSaveStatus.value = status;
-    setTimeout(() => (noteSaveStatus.value = ''), 2000);
-  }, 3000)
+    
+    // 3 秒後清除狀態字樣
+    setTimeout(() => {
+      if (noteSaveStatus.value === status) {
+        noteSaveStatus.value = '';
+      }
+    }, 3000);
+  }, 1000)
 }
 
 // 新增標記單字
@@ -695,6 +746,8 @@ body.articleReading-bg {
   flex-direction: column;
   padding: 10px;
   border-radius: 15px;
+  resize: vertical;
+  overflow: auto;
 }
 
 .note-div .record-words-area input{
@@ -721,6 +774,8 @@ body.articleReading-bg {
   text-align: left;
   border-radius: 15px;
   padding: 10px;
+  resize: vertical;
+  overflow: auto;
 }
 
 .note-div div{
@@ -1139,6 +1194,32 @@ input:checked + .slider:before {
 
 .cancel-confirmation button:hover {
   background-color: #ff3333;
+}
+
+/* Custom Translation Tooltip */
+.translation-tooltip {
+  position: absolute;
+  z-index: 2000;
+  background-color: #333;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+
+.translation-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
 }
 
 /* Toast Styles */

@@ -308,12 +308,15 @@ export const useArticleStore = defineStore('articleStore', () => {
     if (block.text_type !== 'word') return;
 
     const newMarkedState = !block.marked;
+    const articleId = selectedArticle.value.id; // 取得目前文章 ID
+
     block.marked = newMarkedState;
     block.mark_id = newMarkedState ? markId : null;
 
     // Call API to update block's marked status
     try {
         await api.patch(`/article-blocks/${block.id}/marked`, { 
+          "article_id": articleId, // 傳入文章 ID
           "marked": newMarkedState,
           "mark_id": block.mark_id
         });
@@ -328,7 +331,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     if (newMarkedState) {
         try {
             const response = await api.post('/markedword', { 
-              "article_id": selectedArticle.value.id, 
+              "article_id": articleId, 
               "word": block.text,
               "mark_id": markId
             });
@@ -339,7 +342,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     } else {
         try {
             await api.delete(`/markedword`, { 
-                params: { article_id: selectedArticle.value.id, word: block.text }
+                params: { article_id: articleId, word: block.text }
             });
             const idx = selectedArticle.value.marked_words.findIndex(w => w.word === block.text);
             if (idx > -1) {
@@ -371,6 +374,7 @@ export const useArticleStore = defineStore('articleStore', () => {
 
     try {
       await api.patch('/article-blocks/batch-mark', {
+        article_id: articleId, // 傳入文章 ID
         block_ids: blockIds,
         marked: true,
         mark_id: markId
