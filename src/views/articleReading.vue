@@ -101,9 +101,16 @@
             :class="{ word: block.text_type==='word', active: block.marked, paragraph: block.text_type==='paragraph' }"
             :data-index="index"
             @click="handleBlockClick(block, $event)"
+            @mouseenter="handleMouseEnter(block, $event)"
+            @mouseleave="handleMouseLeave"
             v-html="block.text"
           ></span>
         </template>
+      </div>
+      
+      <!-- Hover Translation Tooltip -->
+      <div v-if="hoverTooltip.show" class="translation-tooltip" :style="tooltipStyle">
+        {{ hoverTooltip.text }}
       </div>
       
       <div v-if="showCancelConfirmation" class="cancel-confirmation" :style="confirmationPos" @mouseleave="showCancelConfirmation = false">
@@ -111,10 +118,12 @@
       </div>
     </div>
 
-    <div class="note-div">
+    <div class="resizer" @mousedown="startResize"></div>
+
+    <div class="note-div" :style="{ width: sidebarWidth + 'px' }">
       <details open>
         <summary>不熟悉單字清單</summary>
-        <div class="record-words-area">      
+        <div class="record-words-area" :style="{ height: wordsHeight + 'px' }">      
           <div class="input-bar">
             <div class="translation-controls">
               <span v-if="!isTranslating" @click="toggleTranslation" class="translation-bar">
@@ -149,12 +158,14 @@
             </ul>
           </div>
         </div>
+        <div class="h-resizer" @mousedown="startResizeHeight('words', $event)"></div>
       </details>
 
       <details>
         <summary>筆記</summary>
-        <div class="note-area" contenteditable="true" ref="noteArea" @input="onNoteInput"></div>
+        <div class="note-area" contenteditable="true" ref="noteArea" @input="onNoteInput" :style="{ height: notesHeight + 'px' }"></div>
         <div class="status">{{ noteSaveStatus }}</div>
+        <div class="h-resizer" @mousedown="startResizeHeight('notes', $event)"></div>
       </details>
     </div>
 
@@ -169,7 +180,8 @@
         </div>
       </div>
     </Transition>
-  </div> </template>
+  </div>
+</template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick, defineOptions, reactive } from 'vue'
@@ -204,6 +216,110 @@ const saveTimer = ref(null)
 const editableTitle = ref(null)
 const editorRef = ref(null)
 const noteArea = ref(null)
+const sidebarWidth = ref(400)
+const wordsHeight = ref(300)
+const notesHeight = ref(300)
+const activeHeightType = ref(null)
+let startY = 0
+let startH = 0
+
+const startResize = () => {
+  window.addEventListener('mousemove', doResize)
+  window.addEventListener('mouseup', stopResize)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+const doResize = (e) => {
+  const noteDiv = document.querySelector('.note-div')
+  if (noteDiv) {
+    const rect = noteDiv.getBoundingClientRect()
+    // Calculate width from the right edge of the sidebar to the mouse position
+    const newWidth = rect.right - e.clientX
+    // Set constraints to prevent the sidebar from becoming too small or too large
+    if (newWidth > 200 && newWidth < 800) {
+      sidebarWidth.value = newWidth
+    }
+  }
+}
+
+const stopResize = () => {
+  window.removeEventListener('mousemove', doResize)
+  window.removeEventListener('mouseup', stopResize)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+const startResizeHeight = (type, e) => {
+  activeHeightType.value = type
+  startY = e.clientY
+  startH = type === 'words' ? wordsHeight.value : notesHeight.value
+  window.addEventListener('mousemove', doResizeHeight)
+  window.addEventListener('mouseup', stopResizeHeight)
+  document.body.style.cursor = 'row-resize'
+  document.body.style.userSelect = 'none'
+}
+
+const doResizeHeight = (e) => {
+  const deltaY = e.clientY - startY
+  const newHeight = startH + deltaY
+  if (newHeight > 100 && newHeight < 800) {
+    if (activeHeightType.value === 'words') {
+      wordsHeight.value = newHeight
+    } else {
+      notesHeight.value = newHeight
+    }
+  }
+}
+
+const stopResizeHeight = () => {
+  window.removeEventListener('mousemove', doResizeHeight)
+  window.removeEventListener('mouseup', stopResizeHeight)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+// --- Hover Tooltip State ---
+const hoverTooltip = reactive({
+  show: false,
+  text: '',
+  x: 0,
+  y: 0
+})
+
+const tooltipStyle = computed(() => ({
+  top: `${hoverTooltip.y}px`,
+  left: `${hoverTooltip.x}px`
+}))
+
+function getBlockTranslation(block) {
+  if (!block.marked) return null;
+  // 先用 mark_id 找，這對於選取標記（多個 blocks）最準確
+  let found = selectedArticle.value.marked_words.find(mw => mw.mark_id === block.mark_id);
+  // 如果沒找到，嘗試用文字匹配（相容舊資料或手動新增）
+  if (!found) {
+    found = selectedArticle.value.marked_words.find(mw => mw.word.trim() === block.text.trim());
+  }
+  return found?.translation || null;
+}
+
+function handleMouseEnter(block, event) {
+  if (block.marked) {
+    const translation = getBlockTranslation(block);
+    if (translation) {
+      const rect = event.target.getBoundingClientRect();
+      hoverTooltip.text = translation;
+      // 將 tooltip 置於單字上方中央
+      hoverTooltip.x = rect.left + window.scrollX + (rect.width / 2);
+      hoverTooltip.y = rect.top + window.scrollY - 10;
+      hoverTooltip.show = true;
+    }
+  }
+}
+
+function handleMouseLeave() {
+  hoverTooltip.show = false;
+}
 
 const toast = reactive({
   show: false,
@@ -615,16 +731,17 @@ body.articleReading-bg {
 }
 
 .article-content{
-    width: 50vw;
+    flex: 1;
     text-align: left;
     font-size: 24px;
     margin: 30px;
     border: none;
     outline: none;
+    min-width: 300px;
 }
 
 .article-editor{
-    width: 49vw;
+    flex: 1;
     text-align: left;
     font-size: 24px;
     margin: 30px;
@@ -684,13 +801,24 @@ body.articleReading-bg {
   border-bottom: none;
 }
 
+.resizer {
+  width: 8px;
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.2s;
+  z-index: 10;
+}
+
+.resizer:hover, .resizer:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
 .note-div{
-  width: 400px;
   height: 100%;
+  flex-shrink: 0;
 }
 
 .note-div .record-words-area{
-  height: 25vh;
   display: flex;
   flex-direction: column;
   padding: 10px;
@@ -716,11 +844,22 @@ body.articleReading-bg {
 }
 
 .note-div .note-area{
-  height: 25vh;
   display: block;
   text-align: left;
   border-radius: 15px;
   padding: 10px;
+}
+
+.h-resizer {
+  height: 8px;
+  cursor: row-resize;
+  width: 100%;
+  transition: background 0.2s;
+  z-index: 10;
+}
+
+.h-resizer:hover, .h-resizer:active {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .note-div div{
@@ -1190,5 +1329,32 @@ input:checked + .slider:before {
 .toast-leave-to {
   opacity: 0;
   transform: translate(-50%, -20px);
+}
+
+/* Hover Translation Tooltip Styles */
+.translation-tooltip {
+  position: absolute;
+  z-index: 1000;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  pointer-events: none; /* 避免擋住滑鼠事件 */
+  transform: translate(-50%, -100%); /* 向上位移並水平居中 */
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: opacity 0.2s;
+}
+
+.translation-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.85) transparent transparent transparent;
 }
 </style>

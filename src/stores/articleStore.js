@@ -42,7 +42,7 @@ export const useArticleStore = defineStore('articleStore', () => {
   async function loadArticles() {
     if (articles.length > 0) {
       // 如果已有文章，則不再重新載入，但要確保 selectedArticle 是最新的
-      selectArticle(selectedIndex.value)
+      await selectArticle(selectedIndex.value)
       return
     }
 
@@ -55,7 +55,7 @@ export const useArticleStore = defineStore('articleStore', () => {
       articles.push(...fetchedArticles) // 重新填入
 
       if (articles.length > 0) {
-        selectArticle(0)
+        await selectArticle(0)
       }
     } catch (error) {
       console.error('取得文章失敗:', error)
@@ -87,6 +87,8 @@ export const useArticleStore = defineStore('articleStore', () => {
       } catch (error) {
         console.error('載入完整文章失敗:', error)
       } finally {
+        // 這裡不直接設為 false，讓 loadArticles 的 finally 處理，或者在 select 被單獨呼叫時處理
+        // 但為了相容單獨點擊列表的情境，還是保留，但要小心 race condition
         onloading.value = false
       }
     }
@@ -314,6 +316,7 @@ export const useArticleStore = defineStore('articleStore', () => {
     // Call API to update block's marked status
     try {
         await api.patch(`/article-blocks/${block.id}/marked`, { 
+          "article_id": selectedArticle.value.id,
           "marked": newMarkedState,
           "mark_id": block.mark_id
         });
@@ -371,6 +374,7 @@ export const useArticleStore = defineStore('articleStore', () => {
 
     try {
       await api.patch('/article-blocks/batch-mark', {
+        article_id: articleId,
         block_ids: blockIds,
         marked: true,
         mark_id: markId
