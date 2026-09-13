@@ -84,36 +84,77 @@
           <span class="mode-label">{{ isSelectionMode ? 'Selection' : 'Click' }}</span>
         </div>
         <span>已標記單字: {{ markedWordsCount }}</span>
+        <button v-if="selectedArticle && selectedArticle.id" @click="showQuiz = !showQuiz" style="margin-left:auto; cursor:pointer; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; background-color: #f9f9f9;">
+          {{ showQuiz ? '閱讀文章' : '閱讀測驗' }}
+        </button>
       </div>
 
-      <h1 class="article-title"
-          :contenteditable="isEditing" 
-          placeholder="請輸入標題"
-          @input="onTitleInput"
-          @keydown="handleTitleKeydown"
-          ref="editableTitle"
-          spellcheck="false"></h1>
+      <div v-show="!showQuiz" style="height: 100%; display: flex; flex-direction: column;">
+        <h1 class="article-title"
+            :contenteditable="isEditing" 
+            placeholder="請輸入標題"
+            @input="onTitleInput"
+            @keydown="handleTitleKeydown"
+            ref="editableTitle"
+            spellcheck="false"></h1>
 
-      <div v-if="onloading" class="loading-container">
-          <div class="spinner"></div>
-          <div class="loading-text">載入中...</div>
+        <div v-if="onloading" class="loading-container">
+            <div class="spinner"></div>
+            <div class="loading-text">載入中...</div>
+        </div>
+
+        <div v-if="isEditing" v-show="!onloading" class="article-editor" contenteditable="true" @input="onContentInput" ref="editorRef"></div>
+          
+        <div id="spandiv" v-else v-show="!onloading" @mouseup="handleMouseUp">
+          <template v-for="(block, index) in selectedArticle.blocks" :key="index">
+            <img v-if="block.text_type === 'image'" :src="block.text" class="article-image" :style="block.style" />
+            <span v-else
+              :style="block.style" 
+              :class="{ word: block.text_type==='word', active: block.marked, paragraph: block.text_type==='paragraph' }"
+              :data-index="index"
+              @click="handleBlockClick(block, $event)"
+              @mouseenter="handleMouseEnter(block, $event)"
+              @mouseleave="handleMouseLeave"
+              v-html="block.text"
+            ></span>
+          </template>
+        </div>
       </div>
 
-      <div v-if="isEditing" v-show="!onloading" class="article-editor" contenteditable="true" @input="onContentInput" ref="editorRef"></div>
-        
-      <div id="spandiv" v-else v-show="!onloading" @mouseup="handleMouseUp">
-        <template v-for="(block, index) in selectedArticle.blocks" :key="index">
-          <img v-if="block.text_type === 'image'" :src="block.text" class="article-image" :style="block.style" />
-          <span v-else
-            :style="block.style" 
-            :class="{ word: block.text_type==='word', active: block.marked, paragraph: block.text_type==='paragraph' }"
-            :data-index="index"
-            @click="handleBlockClick(block, $event)"
-            @mouseenter="handleMouseEnter(block, $event)"
-            @mouseleave="handleMouseLeave"
-            v-html="block.text"
-          ></span>
-        </template>
+      <div v-if="showQuiz" class="quiz-container" style="padding: 20px; overflow-y: auto;">
+        <h2 style="margin-bottom: 20px;">閱讀測驗</h2>
+        <div v-if="!selectedArticle.reading_quiz || selectedArticle.reading_quiz.length === 0">
+          <p style="margin-bottom: 10px;">這篇文章尚未建立閱讀測驗。</p>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <label>題目數量：</label>
+            <input type="number" v-model="generateQuizCount" min="1" max="20" style="width: 60px; padding: 4px;"> 題
+            <button @click="handleGenerateQuiz" :disabled="isGeneratingQuiz" style="padding: 4px 12px; cursor: pointer;">
+              {{ isGeneratingQuiz ? '生成中...' : '生成閱讀測驗' }}
+            </button>
+          </div>
+        </div>
+        <div v-else>
+          <div v-for="(q, index) in selectedArticle.reading_quiz" :key="index" class="quiz-question" style="margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px;">
+            <p style="font-weight: bold; margin-bottom: 10px;">{{ index + 1 }}. {{ q.question }}</p>
+            <ul style="list-style: none; padding: 0;">
+              <li v-for="(opt, optIndex) in q.options" :key="optIndex" style="margin-bottom: 8px;">
+                <label style="cursor: pointer; display: flex; align-items: flex-start; gap: 8px;">
+                  <input type="radio" :name="'question-' + index" :value="String.fromCharCode(65 + optIndex)" 
+                         :checked="q.user_answer === String.fromCharCode(65 + optIndex)" 
+                         @change="handleQuizAnswerChange(index, String.fromCharCode(65 + optIndex))"
+                         style="margin-top: 4px;">
+                  <span>{{ String.fromCharCode(65 + optIndex) }}. {{ opt }}</span>
+                </label>
+              </li>
+            </ul>
+            <div v-if="q.user_answer" style="margin-top: 10px; font-size: 0.9em; padding: 8px; border-radius: 4px; background-color: #f5f5f5;" 
+                 :style="{ borderLeft: q.user_answer === q.correct_answer ? '4px solid #4CAF50' : '4px solid #F44336' }">
+              你的答案: <strong>{{ q.user_answer }}</strong> 
+              <span v-if="q.user_answer !== q.correct_answer" style="color: #F44336; margin-left: 10px;">(正確答案: {{ q.correct_answer }})</span>
+              <span v-else style="color: #4CAF50; margin-left: 10px;">✔️ 回答正確</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Custom Translation Tooltip -->
@@ -242,6 +283,32 @@ const isTranslating = ref(false)
 const inputWord = ref('')
 const noteSaveStatus = ref('')
 const saveTimer = ref(null)
+
+const showQuiz = ref(false)
+const generateQuizCount = ref(10)
+const isGeneratingQuiz = ref(false)
+
+const handleGenerateQuiz = async () => {
+  if (isGeneratingQuiz.value) return;
+  isGeneratingQuiz.value = true;
+  try {
+    await articleStore.generateReadingQuiz(generateQuizCount.value);
+    showToast('閱讀測驗生成成功！');
+  } catch (error) {
+    showToast('生成失敗，請稍後再試。', 'error');
+  } finally {
+    isGeneratingQuiz.value = false;
+  }
+}
+
+const handleQuizAnswerChange = async (index, answer) => {
+  try {
+    await articleStore.updateReadingQuizAnswer(index, answer);
+    showToast('已記錄您的答案');
+  } catch (error) {
+    showToast('儲存答案失敗', 'error');
+  }
+}
 
 const hoveredTranslation = ref('')
 const tooltipPosition = ref({ top: '0px', left: '0px' })
