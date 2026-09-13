@@ -654,6 +654,40 @@ export const useArticleStore = defineStore('articleStore', () => {
       }
     
     
+      async function generateReadingQuiz(requestedCount = 10) {
+        if (!selectedArticle.value || !selectedArticle.value.id) return null;
+        try {
+          const res = await api.post(`/article/${selectedArticle.value.id}/generate-reading-quiz`, {
+            requested_count: requestedCount
+          });
+          selectedArticle.value.reading_quiz = res.data.reading_quiz;
+          if (selectedIndex.value >= 0 && selectedIndex.value < articles.length) {
+            articles[selectedIndex.value].reading_quiz = res.data.reading_quiz;
+          }
+          return res.data.reading_quiz;
+        } catch (error) {
+          console.error("生成閱讀測驗失敗:", error);
+          throw error;
+        }
+      }
+
+      async function updateReadingQuizAnswer(questionIndex, userAnswer) {
+        if (!selectedArticle.value || !selectedArticle.value.id) return;
+        try {
+          const res = await api.put(`/article/${selectedArticle.value.id}/reading-quiz/answer`, {
+            question_index: questionIndex,
+            user_answer: userAnswer
+          });
+          selectedArticle.value.reading_quiz = res.data.reading_quiz;
+          if (selectedIndex.value >= 0 && selectedIndex.value < articles.length) {
+            articles[selectedIndex.value].reading_quiz = res.data.reading_quiz;
+          }
+        } catch (error) {
+          console.error("更新測驗答案失敗:", error);
+          throw error;
+        }
+      }
+
       return {
         // State
         articles,
@@ -682,5 +716,7 @@ export const useArticleStore = defineStore('articleStore', () => {
         fetchRandomArticle,
         getMarkedWordsFromArticles,
         translateMarkedWords,
+        generateReadingQuiz,
+        updateReadingQuizAnswer,
       }
     })
