@@ -1,6 +1,6 @@
 <template>
   <div class="quiz-container">
-    <h1>英翻中測驗</h1>
+    <h1>翻譯測驗</h1>
 
     <!-- Start Quiz Button -->
     <div v-if="!quizInProgress" class="start-quiz-section">
