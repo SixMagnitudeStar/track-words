@@ -82,11 +82,14 @@
             <span class="slider round"></span>
           </label>
           <span class="mode-label">{{ isSelectionMode ? 'Selection' : 'Click' }}</span>
+          <div class="tooltip" v-if="selectedArticle && selectedArticle.id" style="margin-left: 15px; display: flex; align-items: center;">
+            <!-- Icon attribution: <a href="https://www.flaticon.com/free-icons/reading" title="reading icons">Reading icons created by mangsaabguru - Flaticon</a> -->
+            <img v-if="!showQuiz" src="../assets/test.png" @click="showQuiz = true" class="icon" style="cursor: pointer; width: 24px; height: 24px;" alt="閱讀測驗" />
+            <img v-else src="../assets/reading-book.png" @click="showQuiz = false" class="icon" style="cursor: pointer; width: 24px; height: 24px;" alt="閱讀文章" />
+            <div class="tooltip-text">{{ showQuiz ? '閱讀文章' : '閱讀測驗' }}</div>
+          </div>
         </div>
         <span>已標記單字: {{ markedWordsCount }}</span>
-        <button v-if="selectedArticle && selectedArticle.id" @click="showQuiz = !showQuiz" style="margin-left:auto; cursor:pointer; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; background-color: #f9f9f9;">
-          {{ showQuiz ? '閱讀文章' : '閱讀測驗' }}
-        </button>
       </div>
 
       <div v-show="!showQuiz" style="height: 100%; display: flex; flex-direction: column;">
@@ -176,6 +179,11 @@
       
       <div v-if="showCancelConfirmation" class="cancel-confirmation" :style="confirmationPos" @mouseleave="showCancelConfirmation = false">
         <button @click="confirmCancelMark">Cancel Mark</button>
+      </div>
+      
+      <div class="icon-attribution" style="margin-top: auto; padding: 20px 0 10px; font-size: 12px; color: #aaa; text-align: center; line-height: 1.5;">
+        <a href="https://www.flaticon.com/free-icons/reading" title="reading icons" target="_blank" style="color: #aaa; text-decoration: none;">Reading icons created by mangsaabguru - Flaticon</a><br>
+        <a href="https://www.flaticon.com/free-icons/test" title="test icons" target="_blank" style="color: #aaa; text-decoration: none;">Test icons created by Magnific - Flaticon</a>
       </div>
     </div>
 

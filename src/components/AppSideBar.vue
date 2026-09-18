@@ -50,7 +50,7 @@
           <router-link to="/EnZhQuiz" class="router-link-custom">
             <span class="iconBox">
               <img class="icon" src="@/assets/test.png" alt="中英測驗" />
-              <span>中英測驗</span>
+              <span>翻譯測驗</span>
             </span>
           </router-link>
           <router-link to="/Forgetting-curve" class="router-link-custom">

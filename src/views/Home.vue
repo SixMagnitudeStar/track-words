@@ -107,7 +107,7 @@ export default {
         class="home-card bg-white shadow-md rounded-lg p-6 flex flex-row items-center justify-center hover:scale-105 transition transform duration-200"
       >
         <img src="@/assets/test.png" alt="EnZhQuiz" class="w-10 h-10 mr-4"/>
-        <span class="text-lg font-semibold">中英測驗</span>
+        <span class="text-lg font-semibold">翻譯測驗</span>
       </router-link>
       <router-link
         to="/Forgetting-curve"
